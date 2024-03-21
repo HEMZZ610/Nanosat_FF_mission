@@ -4,6 +4,17 @@
 
 # Methodology
 
+# Repo directory structure
+```markdown
+├── core
+├── Testing
+├── README.md
+└── .gitignore
+```
+
+- **core** contains the functions and details related to core part of Spacecraft OOS that attitude dynamics models, kinematics, translation dynamics, etc.
+- **Testing** contains the test of each function/modules.
+- 
 # Simulation
 
 
