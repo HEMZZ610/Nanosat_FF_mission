@@ -1,0 +1,18 @@
+## Copy the following lines of code 
+# FROM HERE
+import numpy
+from scipy import integrate
+import matplotlib.pyplot as plt
+import os
+import sys
+import math
+## ADD the packages here if you think it is needed and update it in this file.
+
+## Import our libraries here
+Attitude_library_path= os.path.join(os.path.dirname(os.path.abspath(__file__)),"../src")
+sys.path.insert(0, Attitude_library_path)
+import Attitude_Kinematics
+import Attitude_Dynamics
+
+
+## Copy Untill here
