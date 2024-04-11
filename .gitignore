@@ -1,0 +1,3 @@
+# ignore all inside __pycahe__ folder
+__pycahe__/
+

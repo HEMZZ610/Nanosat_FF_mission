@@ -11,6 +11,7 @@ import math
 
 ## Directional cosine matrix
 # Taken from Bong Wie Space vehicle dynamics and control
+
 def C_1(theta):
     C=numpy.array([1,0,0],
                   [0,math.cos(theta),math.sin(theta)],
