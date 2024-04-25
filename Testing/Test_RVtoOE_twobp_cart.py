@@ -20,15 +20,25 @@ import math
 Library= os.path.join(os.path.dirname(os.path.abspath(__file__)),"../core")
 sys.path.insert(0, Library)
 
-from TwoBP import RVtoOE, twobp_cart
+from TwoBP import car2kep, twobp_cart
 
 r=numpy.array([-6045,-3490,2500])
 v=numpy.array([-3.457,6.618,2.533])
 mu=398600 # gravitational parameter
 # test of RVtoOE
-COE=RVtoOE(r,v,mu)
+COE=car2kep(r,v,mu)
 
 print(COE)
+CEO_0=numpy.zeros((6,1))
+rp = 254.9 ;                 # [km]        Perigee distance
+CEO_0[] = 0.0045 ;                # [-]         Eccentricity
+data.orbit.a0 = ( data.orbit.rp + data.orbit.Re0 ) / ( 1 - data.orbit.e0 ) ;  # [km]    Semimajor axis of the orbit
+data.orbit.i0 = pi / 2 ;                # [rad]       Orbit inclination
+data.orbit.Omega0 = 0.0001 ;            # [rad]       Orbit RAAN
+data.orbit.omega0 = 0 ;                 # [rad]       Orbit argument of perigee
+data.orbit.theta0 = 0 ;                 # [rad]       Orbit initial true anomaly
+data.orbit.Torb = 2*pi*sqrt(data.orbit.a0^3/data.orbit.mu) ;   # [s]    Orbital period
+
 
 # test for 2body caresian function twobp_cart
 

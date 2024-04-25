@@ -1,6 +1,7 @@
 """
-Usage:
-    
+This file contains functions required for orbital mechanics - starting from 2body problem to gauss planetary equations + auxillary funtions
+
+Date: 25-04-2024
 
 Author:
     Vishnuvardhan Shakthibala
@@ -12,11 +13,14 @@ import os
 import sys
 import math
 
+from Transformations import PQW2ECI,RSW2ECI
+from Perturbations import aspherical_perturbation,atmosphheric_drag
+
 # conversion factor
 Rad2deg=180/math.pi
 
 
-def RVtoOE(r,v,mu):
+def car2kep(r,v,mu):
 
     # Cartesian to orbital elements convertion function
     
@@ -76,10 +80,31 @@ def RVtoOE(r,v,mu):
     
     COE_vec=numpy.array([h[0],h[1],h[2],e[0],e[1],e[2],i,Omega,omega,theta])
     COE_mag=numpy.array([h_m,e_m,Rad2deg*i,Rad2deg*Omega,Rad2deg*omega,Rad2deg*theta])
-    # angular momentum, eccentricity, inclination, RAAN, argument of perigee, true anomaly
+    # orbital elements = [angular momentum, eccentricity, inclination, RAAN, argument of perigee, true anomaly]
     COE=(COE_vec,COE_mag)
     
     return COE
+
+def kep2car(COE,mu):
+    h = COE[0]
+    e =COE[1]
+    i =COE[2]
+    OM = COE[3]
+    om =COE[4]
+    TA =COE[5]
+    
+    # obtaining position and velocity vector in perifocan reference frame
+    rp = ( h ** 2 / mu ) * ( 1 / ( 1 + e * numpy.cos( TA ) ) ) * ( numpy.cos( TA ) * numpy.array([ 1 , 0 ,0 ])
+        + numpy.sin( TA ) * numpy.array([ 0, 1, 0 ]) )
+    vp = ( mu / h ) * ( -numpy.sin( TA ) * numpy.array([ 1 , 0 , 0 ]) + ( e + numpy.cos( TA ) ) * numpy.array([ 0 , 1 , 0 ]) ) ;
+
+
+    RR=numpy.matmul(PQW2ECI(OM,om,i),numpy.transpose(rp))
+    VV=numpy.matmul(PQW2ECI(OM,om,i),numpy.transpose(vp))
+
+    return (RR,VV)
+
+
 
 def twobp_cart(t,r0,mu):
     # Ideal two body problem in cartesian
@@ -120,60 +145,131 @@ def OE_Timetotheta(COE,T,mu):
     theta = 2 * numpy.arctan(term1)
     return theta
 
-def J2_Perturb(t,x0,param):
+def gauss_eqn(t,yy,param):
     # Guass planetary equations
     # Input, 
     # t - time
     # x0 - state vector
     # param is a tuple 3 x 1
-    # param[0] - COE vector
+    # param[0] - COE vector - [angular momentum, eccentricity, inclination, RAAN, argument of perigee, true anomaly]
     # param[1] - J2 constant value
     # param[0] - list of information related to Earth [mu, radius]
 
-    dy_dt=numpy.zeros((6,))
-    COE=param[0]
-    J2=param[1]
-    mu=param[2][0]
-    R=param[2][1]
-    # state vector [h,e,theta,RAAN,i,omega]
-    r=((x0[0]**2)/mu)*(1/(1+x0[1]*numpy.cos(x0[2])))
-    u=x0[5]+x0[2]
-    
-    term2=(numpy.sin(x0[4])**2)*numpy.sin(2*u)
-    term1=(3/2)*((J2*mu*R**2)/(r**3))
-    dy_dt[0]=term1*term2
-    
-    # eccentricy
-    dy_dt[1]=term1*(((x0[0]**2)/(mu*r))*
-            numpy.sin(x0[2])*((3*numpy.sin(x0[4])**2)*(numpy.sin(u)**2)-1)
-             -numpy.sin(2*u)*(numpy.sin(x0[4])**2)
-             *((3+x0[1]*numpy.cos(x0[5]))*numpy.cos(x0[5])+x0[1]))
-    
-    # True anomaly
-    
-    dy_dt[2]=(x0[0]/r**2)+((1/(x0[0]*x0[1]))*term1)*(((x0[0]**2)/(mu*r))*
-            numpy.cos(x0[2])*((3*numpy.sin(x0[4])**2)*(numpy.sin(u)**2)-1)
-             -((2+x0[1]*numpy.cos(x0[5]))*numpy.sin(2*u)*(numpy.sin(x0[4])**2)*numpy.sin(x0[5])))
+    mu=param
+    y_dot=numpy.zeros((6,))
 
-    # RAAN
-    term1=-3*((J2*mu*R**2)/(x0[0]*r**3))
-    dy_dt[3]=term1*(numpy.sin(u)**2)*numpy.sin(x0[4])
-    
-    # inclination
 
-    term1=-(3/4)*((J2*mu*R**2)/(x0[0]*r**3))
-    
-    dy_dt[4]=term1*numpy.sin(2*u)*numpy.sin(2*x0[4])
 
-    # argument of periapsis
-    term1=(3/2)*((J2*mu*R**2)/(x0[1]*x0[0]*r**3))
-    dy_dt[5]=term1*(((x0[0]**2)/(mu*r))*
-            numpy.cos(x0[5])*((1-3*numpy.sin(x0[4])**2)*(numpy.sin(u)**2))
-             -(2+x0[1]*numpy.cos(x0[5]))*numpy.sin(2*u)*(numpy.sin(x0[4])**2)
-             *numpy.cos(x0[5])+2*x0[1]*(numpy.cos(x0[5])**2)*(numpy.sin(u)**2))
+    # assigning the state variables
+    a = yy[0]
+    e = yy[1]
+    i = yy[2]
+    OM = yy[3]
+    om = yy[4]
+    theta = yy[5]
+    u=theta+om
+
+
+    if theta>2*numpy.pi:
+        theta=theta-2*numpy.pi
+
+    h=numpy.sqrt(mu*a*(1-e**2))
+    term1=(h**2)/(mu)
+    p=term1
+    rp=a*(1-e)
+    r = p / ( 1 + e * numpy.cos( theta ) ) 
+    n = numpy.sqrt(mu/(a**3))
+
+    rr,vv=kep2car(numpy.array([h,yy[1],yy[2],yy[3],yy[4],yy[5]]),mu)
+    # data={"J":[J2,J3,J4],"S/C":[M_SC,A_cross,C_D,Ballistic coefficient],"Primary":[mu,RE.w]}
+    data={"J":[0.1082626925638815e-2,0,0],"S/C":[300,2,0.9,300],"Primary":[3.98600433e5,6378.16,7.2921150e-5]}
+
+    # perturbations
+    a_J=aspherical_perturbation(rr,data,1)
+    a_drag=numpy.zeros(3) #atmosphheric_drag(rr,vv,data)
+    # a_J = numpy.zeros(3)
+    a_per = a_J 
+
+    F_J=numpy.matmul(RSW2ECI(om,OM,i,theta),a_per)
+    # Vallado page: 164 convcersion
+    r_unit=rr / (rr[0]**2 + rr[1]**2 + rr[2]**2)**0.5
+    w_unit=numpy.cross(rr,vv)/numpy.linalg.norm(numpy.cross(rr,vv))
+    s_unit=numpy.cross(w_unit,r_unit)
+
+    t_h = vv / numpy.linalg.norm( vv )                                          # velocity versoe
+    h_h = numpy.cross( rr, vv ) / numpy.linalg.norm(numpy.cross(rr, vv ) )           # angular momentum veror
+    n_h = numpy.cross( h_h, t_h ) 
+
+
+
+    Rot_RSW=numpy.concatenate((r_unit, s_unit, w_unit)).reshape((-1, 3), order='F')
+    Rot_RSW=numpy.concatenate((t_h, h_h, n_h)).reshape((-1, 3), order='F')
+    F_J=numpy.matmul(numpy.transpose(Rot_RSW),a_per)
+    #F_J=numpy.zeros(3)
+    FR=F_J[0]
+    FS=F_J[1]
+    FW=F_J[2]
+
+    
+    y_dot[0]=(2/(n*numpy.sqrt(1-e**2)))*((e*numpy.sin(theta)*FR)+(p/r)*FS)
+
+    y_dot[1]=((numpy.sqrt(1-e**2))/(n*a))*((numpy.sin(theta)*FR)+(numpy.cos(theta)+((e+numpy.cos(theta))/(1+e*numpy.cos(theta))))*FS)
+    
+    y_dot[2]=((r*numpy.cos(u))/(n*(a**2)*numpy.sqrt(1-e**2)))*FW
+    
+    y_dot[3]=((r*numpy.sin(u))/(n*(a**2)*numpy.sqrt(1-e**2)*numpy.sin(i)))*FW
+    
+    y_dot[4]=((numpy.sqrt(1-e**2))/(n*a*e))*((-numpy.cos(theta)*FR)+numpy.sin(theta)*(1+(r/p))*FS)-((r*(1/numpy.tan(i))*numpy.sin(u))/h)*FW
+
+    y_dot[5]=(h/r**2)+(1/(e*h))*(p*numpy.cos(theta))*FR-(p+r)*numpy.sin(theta)*FS
     
     
-    return dy_dt
+    return y_dot
+
+# guess event
+
+def Event_COE(t,yy,param):
+    # Guass planetary equations
+    # Input, 
+    # t - time
+    # x0 - state vector
+    # param is a tuple 3 x 1
+    # param[0] - COE vector - [angular momentum, eccentricity, inclination, RAAN, argument of perigee, true anomaly]
+    # param[1] - J2 constant value
+    # param[0] - list of information related to Earth [mu, radius]
+
+    mu=param
+    y_dot=numpy.zeros((6,))
+
+
+
+    # assigning the state variables
+    a = yy[0]
+    e = yy[1]
+    i = yy[2]
+    OM = yy[3]
+    om = yy[4]
+    theta = yy[5]
+    u=theta+om
+
+
+    if theta>2*numpy.pi:
+        theta=theta-2*numpy.pi
+
+    h=numpy.sqrt(mu*a*(1-e**2))
+
+    rr,vv=kep2car(numpy.array([h,yy[1],yy[2],yy[3],yy[4],yy[5]]),mu)
+    # data={"J":[J2,J3,J4],"S/C":[M_SC,A_cross,C_D,Ballistic coefficient],"Primary":[mu,RE.w]}
+    data={"J":[0.1082626925638815e-2,0,0],"S/C":[300,2,0.9,300],"Primary":[3.98600433e5,6378.16,7.2921150e-5]}
+    R_E=data["Primary"][1]
+
+    r=(rr[0]**2 + rr[1]**2 + rr[2]**2)**0.5 # position magnitude
+
+    if r-R_E < 100 :
+       return 0
+    else:
+        return r 
+
 
 
 # References frames and convertions

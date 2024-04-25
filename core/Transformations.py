@@ -1,7 +1,7 @@
 """
-Typical transformations required for Astrodynamics
+Standard transformations required for Astrodynamics
     
-Date: 11-04-2024
+Date: 25-04-2024
 
 Author:
     SDCS group
@@ -11,36 +11,54 @@ Author:
 import numpy
 import math
 
-def C_1(theta):
-    C=numpy.array([1,0,0],
-                  [0,math.cos(theta),math.sin(theta)],
-                  [0 -math.sin(theta),math.cos(theta)])
+def C1(theta):
+    C=numpy.array([[1,0,0],
+                  [0,numpy.cos(theta),numpy.sin(theta)],
+                  [0,-numpy.sin(theta),numpy.cos(theta)]])
     return C
 
-def C_2(theta):
-    C=numpy.array([math.cos(theta),0,-math.sin(theta)],
+def C2(theta):
+    C=numpy.array([[numpy.cos(theta),0,-numpy.sin(theta)],
                   [0,1,0],
-                  [math.sin(theta),0,math.cos(theta)])
+                  [numpy.sin(theta),0,numpy.cos(theta)]])
     return C
 
-def C_3(theta):
-    C=numpy.array([math.cos(theta),math.sin(theta),0],
-                  [-math.sin(theta),math.cos(theta),0],
-                  [0,0,1])
+def C3(theta):
+    C=numpy.array([[numpy.cos(theta),numpy.sin(theta),0],
+                  [-numpy.sin(theta),numpy.cos(theta),0],
+                  [0,0,1]])
     return C
 
+# references frame transformations
+
+# Orbit Perifocal to Earth centric inertial frame
 def PQW2ECI(OM,om,i):
-    C=C3(-OM)*C1(-i)*C3(-om)
+    C=numpy.matmul(C3(-OM),numpy.matmul(C1(-i),C3(-om)))
     return C
 
+# Earth centric inertial to Orbit Perifocal
 def ECI2PQW(OM,om,i):
     C=C3(om)*C1(i)*C3(OM)
     return C
 
+# Orbit Perifocal to RSW (LVLH) frame
 def PQW2RSW(theta):
     C=C3(theta)
     return C
 
-def RSWwPQW(theta):
+# RSW (LVLH) frame to Orbit Perifocal
+def RSW2PQW(theta):
     C=C3(-theta)
     return C
+
+def RSW2ECI(OM,om,i,theta):
+    C=numpy.matmul(C3(-OM),numpy.matmul(C1(-i),C3(-(om+theta))))
+    u=om+theta
+    C_org=numpy.array([[-numpy.sin(OM)*numpy.sin(i)*numpy.sin(u)+numpy.sin(OM)*numpy.sin(u),numpy.sin(OM)*numpy.sin(i)*numpy.sin(u)+numpy.sin(OM)*numpy.sin(u),numpy.sin(i)*numpy.sin(u)],
+        [-numpy.sin(OM)*numpy.sin(i)*numpy.sin(u)-numpy.sin(OM)*numpy.sin(u),numpy.sin(OM)*numpy.sin(i)*numpy.sin(u)-numpy.sin(OM)*numpy.sin(u),numpy.sin(i)*numpy.sin(u)],
+        [numpy.sin(OM)*numpy.sin(i),-numpy.sin(OM)*numpy.sin(i),numpy.sin(i)]])
+
+
+    return C_org
+
+

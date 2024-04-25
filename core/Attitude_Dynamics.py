@@ -1,8 +1,11 @@
 """
-Usage:
-    
+
+Attitude dynamics related functions
+
+Date: 25-04-2024
 
 Author:
+    SDCS group
     Vishnuvardhan Shakthibala
 """
 import numpy

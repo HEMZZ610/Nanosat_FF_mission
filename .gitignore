@@ -1,3 +1,3 @@
 # ignore all inside __pycahe__ folder
-__pycahe__/
+**/__pycache__/
 
