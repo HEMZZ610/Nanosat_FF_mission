@@ -9,7 +9,7 @@ import numpy
 import os
 import sys
 import math
-from pyatmos import expo
+#from pyatmos import expo
 
 
 def aspherical_perturbation(rr,data,n):

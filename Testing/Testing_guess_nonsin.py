@@ -22,7 +22,7 @@ import math
 Library= os.path.join(os.path.dirname(os.path.abspath(__file__)),"../core")
 sys.path.insert(0, Library)
 
-from TwoBP import car2kep, kep2car, twobp_cart, gauss_eqn, Event_COE
+from TwoBP import car2kep, kep2car, twobp_cart, gauss_eqn, Event_COE, theta2M, guess_nonsingular, M2theta
 
 
 r=numpy.array([-6045,-3490,2500])
@@ -32,6 +32,8 @@ mu=398600 # gravitational parameter
 COE=car2kep(r,v,mu)
 
 print(COE)
+
+
 
 rp = 200                  # [km]        Perigee distance
 R0=6378.16
@@ -53,6 +55,15 @@ Torb = 2*numpy.pi*numpy.sqrt(CEO_0[0]**3/mu)    # [s]    Orbital period
 n_revolution=10
 T_total=n_revolution*Torb
 
+a = CEO_0[0]
+M=theta2M(CEO_0[5],CEO_0[1])
+l = M+CEO_0[4]
+i = CEO_0[2]
+q1 = CEO_0[1]*numpy.sin(CEO_0[4])
+q2 = CEO_0[1]*numpy.cos(CEO_0[4])
+OM = CEO_0[3]
+
+yy_o=numpy.array([a,l,i,q1,q2,OM])
 # test for gauess equation
 
 r0=numpy.concatenate((r,v)) 
@@ -60,18 +71,38 @@ t_span=[0,T_total]
 teval=numpy.linspace(0, T_total, 20000)
 # K=numpy.array([k1,k2])
 
-sol=integrate.solve_ivp(gauss_eqn, t_span, CEO_0,t_eval=teval,
-                        method='RK45',args=(mu,),rtol=1e-13, atol=1e-10,events=[Event_COE])
+sol=integrate.solve_ivp(guess_nonsingular, t_span, yy_o,t_eval=teval,
+                        method='RK45',args=(mu,),rtol=1e-13, atol=1e-10)
+
+
+
 
 rr_s=numpy.zeros((3,len(sol.y[0])))
 vv_s=numpy.zeros((3,len(sol.y[0])))
 
 for i in range(0,len(sol.y[0])):
+    e=numpy.sqrt(sol.y[3][i]**2 + sol.y[4][i]**2)
+    h=numpy.sqrt(mu*sol.y[0][i]*(1-e**2))
+    term1=(h**2)/(mu)
+
+    omega_peri = numpy.arcsin(sol.y[3][i]**2/ e)
+    mean_anamoly = sol.y[1][i]-omega_peri
+    theta_tuple = M2theta(mean_anamoly,e,1e-8)
+    theta =theta_tuple[0]
+    u=theta+omega_peri
+
+
+
     if sol.y[5][i]>2*numpy.pi:
         sol.y[5][i]=sol.y[5][i]-2*numpy.pi     
-    h = numpy.sqrt(mu*sol.y[0][i]*(1-sol.y[1][i]**2)) 
-    rr_s[:,i],vv_s[:,i]=kep2car(numpy.array([h,sol.y[1][i],sol.y[2][i],sol.y[3][i],sol.y[4][i],sol.y[5][i]]),mu)
+    rr_s[:,i],vv_s[:,i]=kep2car(numpy.array([h,e,i,sol.y[5][i],omega_peri,theta]),mu)
 
+    # h = COE[0]
+    # e =COE[1]
+    # i =COE[2]
+    # OM = COE[3]
+    # om =COE[4]
+    # TA =COE[5]
 
     
 
