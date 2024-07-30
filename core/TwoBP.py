@@ -632,3 +632,57 @@ def Lagrange_deri(t,yy,param,q1_0,q2_0,t0,t):
                          [term_OM_a,0,term_OM_i,term_OM_q1,term_OM_q2,0]])
         
     return y_dot
+
+
+
+def Cart2RO(RO,OE_1):
+    # Guass planetary equations
+    # Input, 
+    # t - time
+    # x0 - state vector
+    # param is a tuple 3 x 1
+    # param[0] - COE vector - [angular momentum, eccentricity, inclination, RAAN, argument of perigee, true anomaly]
+    # param[1] - J2 constant value
+    # param[0] - list of information related to Earth [mu, radius]
+
+    # data={"J":[J2,J3,J4],"S/C":[M_SC,A_cross,C_D,Ballistic coefficient],"Primary":[mu,RE.w]}
+    data={"J":[0.1082626925638815e-2,0,0],"S/C":[300,2,0.9,300],"Primary":[3.98600433e5,6378.16,7.2921150e-5]}
+    mu=param
+    y_dot=numpy.zeros((6,))
+    epsilon =  data["J"][0]
+
+
+
+    # assigning the state variables
+    a =OE_1[0]
+    l =OE_1[1]
+    i =OE_1[2]
+    q1 =OE_1[3]
+    q2 =OE_1[4]
+    OM =OE_1[5]
+
+
+
+    e=numpy.sqrt(q1**2 + q2**2)
+    h=numpy.sqrt(mu*a*(1-e**2))
+    term1=(h**2)/(mu)
+    neta = 1- q1**2 - q2**2
+    p=term1
+    rp=a*(1-e)
+    r = ( a*neta**2 ) / (1+q1)
+    n = numpy.sqrt(mu/(a**3))
+
+    omega_peri = numpy.arcsin(q1 / e)
+    mean_anamoly = l-omega_peri
+    theta_tuple = M2theta(mean_anamoly,e,1e-8)
+    theta =theta_tuple[0]
+    u=theta+omega_peri
+
+    Vr = (h/p) * (q1*numpy.sin(u)-q2*numpy.cos(u))
+    Vt = (h/p) * (1+q1*numpy.cos(u)+q2*numpy.sin(u))
+    
+    x = (r/a)* RO[0]+ (Vr/Vt)*r*
+
+    return y_dot
+
+# create a simple function to do quick sort of the array and return the index of the sorted array   
