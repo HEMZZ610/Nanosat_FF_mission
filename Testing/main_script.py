@@ -22,7 +22,47 @@ import math
 Library= os.path.join(os.path.dirname(os.path.abspath(__file__)),"../core")
 sys.path.insert(0, Library)
 
-from TwoBP import car2kep, kep2car, twobp_cart, gauss_eqn, Event_COE
+from TwoBP import car2kep, kep2car, twobp_cart, gauss_eqn, Event_COE, theta2M, guess_nonsingular, M2theta, Param2NROE
+
+
+# Parameters that is of interest to the problem
+
+data={"J":[0.1082626925638815e-2,0,0],"S/C":[300,2,0.9,300],"Primary":[3.98600433e5,6378.16,7.2921150e-5]}
+
+
+# CHECK Formation Establishment and Reconfiguration Using
+# Differential Elements in J2-Perturbed Orbits and SENGUPTA
+# Chaser spacecraft initial conditions
+# orbital elements - non singular
+
+
+
+# Deputy spacecraft relative orbital  elements/ LVLH initial conditions
+# NOE_chief = numpy.array([a,lambda_0,i,q1,q2,omega])
+NOE_chief = numpy.array([6803.1366,0,97.04,0.005,0,270.828])
+
+# Design parameters for the formation - Sengupta and Vadali 2007 Relative Motion and the Geometry of Formations in Keplerian Elliptic Orbits
+
+rho_1 = 500 # [m]  - radial separation 
+rho_2 = 200 # [m]  - along-track separation
+rho_3 = 300 # [m]  - cross-track separation
+alpha = 0  # [rad] - angle between the radial and along-track separation
+beta = numpy.pi/2 # [rad] - angle between the radial and cross-track separation
+vd = -10 # Drift per revolutions m/resolution
+
+parameters=numpy.array([rho_1,rho_2,rho_3,alpha,beta,vd])
+
+# Initial relative orbital elements
+RNOE_0=Param2NROE(NOE_chief, parameters,data)
+
+print("RELATIVE ORBITAL ELEMTNS INITIAL", RNOE_0)
+print("CHIEF INTIIAL ORBITAL ELEMENTS", NOE_chief)
+
+
+# feed it into dynamical system to get the output
+
+
+# Convert from NROE to Carterian co-ordinates. 
 
 
 r=numpy.array([-6045,-3490,2500])
@@ -32,6 +72,8 @@ mu=398600 # gravitational parameter
 COE=car2kep(r,v,mu)
 
 print(COE)
+
+
 
 rp = 200                  # [km]        Perigee distance
 R0=6378.16
@@ -50,9 +92,18 @@ h0 = numpy.sqrt(mu*CEO_0[0]*(1-CEO_0[1]**2))  # [km]    Angular momentum axis of
 
 
 Torb = 2*numpy.pi*numpy.sqrt(CEO_0[0]**3/mu)    # [s]    Orbital period
-n_revolution=500
+n_revolution=10
 T_total=n_revolution*Torb
 
+a = CEO_0[0]
+M=theta2M(CEO_0[5],CEO_0[1])
+l = M+CEO_0[4]
+i = CEO_0[2]
+q1 = CEO_0[1]*numpy.sin(CEO_0[4])
+q2 = CEO_0[1]*numpy.cos(CEO_0[4])
+OM = CEO_0[3]
+
+yy_o=numpy.array([a,l,i,q1,q2,OM])
 # test for gauess equation
 
 r0=numpy.concatenate((r,v)) 
@@ -60,18 +111,38 @@ t_span=[0,T_total]
 teval=numpy.linspace(0, T_total, 20000)
 # K=numpy.array([k1,k2])
 
-sol=integrate.solve_ivp(gauss_eqn, t_span, CEO_0,t_eval=teval,
-                        method='RK23',args=(mu,),rtol=1e-8, atol=1e-6,events=[Event_COE])
+sol=integrate.solve_ivp(guess_nonsingular, t_span, yy_o,t_eval=teval,
+                        method='RK45',args=(mu,),rtol=1e-13, atol=1e-10)
+
+
+
 
 rr_s=numpy.zeros((3,len(sol.y[0])))
 vv_s=numpy.zeros((3,len(sol.y[0])))
 
 for i in range(0,len(sol.y[0])):
+    e=numpy.sqrt(sol.y[3][i]**2 + sol.y[4][i]**2)
+    h=numpy.sqrt(mu*sol.y[0][i]*(1-e**2))
+    term1=(h**2)/(mu)
+
+    omega_peri = numpy.arcsin(sol.y[3][i]**2/ e)
+    mean_anamoly = sol.y[1][i]-omega_peri
+    theta_tuple = M2theta(mean_anamoly,e,1e-8)
+    theta =theta_tuple[0]
+    u=theta+omega_peri
+
+
+
     if sol.y[5][i]>2*numpy.pi:
         sol.y[5][i]=sol.y[5][i]-2*numpy.pi     
-    h = numpy.sqrt(mu*sol.y[0][i]*(1-sol.y[1][i]**2)) 
-    rr_s[:,i],vv_s[:,i]=kep2car(numpy.array([h,sol.y[1][i],sol.y[2][i],sol.y[3][i],sol.y[4][i],sol.y[5][i]]),mu)
+    rr_s[:,i],vv_s[:,i]=kep2car(numpy.array([h,e,i,sol.y[5][i],omega_peri,theta]),mu)
 
+    # h = COE[0]
+    # e =COE[1]
+    # i =COE[2]
+    # OM = COE[3]
+    # om =COE[4]
+    # TA =COE[5]
 
     
 
@@ -99,18 +170,18 @@ ax.set_title('two body trajectory')
 
 
 
-# fig, axs = plt.subplots(3, 1)
+fig, axs = plt.subplots(3, 1)
 
-# # Plot data on the first subplot
-# axs[0].plot(teval, rr_s[0])
-# axs[0].set_title('x')
+# Plot data on the first subplot
+axs[0].plot(teval, rr_s[0])
+axs[0].set_title('x')
 
-# # Plot data on the second subplot
-# axs[1].plot(teval, rr_s[1])
-# axs[1].set_title('y')
+# Plot data on the second subplot
+axs[1].plot(teval, rr_s[1])
+axs[1].set_title('y')
 
-# axs[2].plot(teval, rr_s[2])
-# axs[2].set_title('z')
+axs[2].plot(teval, rr_s[2])
+axs[2].set_title('z')
 
 
 fig, axs = plt.subplots(3, 1)

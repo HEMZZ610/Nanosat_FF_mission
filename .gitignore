@@ -1,3 +1,5 @@
 # ignore all inside __pycahe__ folder
 **/__pycache__/
-
+## ignore all inside myvenv and .venv folder
+/myenv/
+/.venv/

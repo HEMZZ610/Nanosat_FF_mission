@@ -218,25 +218,35 @@ def gauss_eqn(t,yy,param):
     # a_J = numpy.zeros(3)
     a_per = a_J 
 
-    F_J=numpy.matmul(RSW2ECI(om,OM,i,theta),a_per)
-    # Vallado page: 164 convcersion
+    #F_J=numpy.matmul(RSW2ECI(om,OM,i,theta),a_per)
+    # Vallado page: 164 convcersion -RSW frame
     r_unit=rr / (rr[0]**2 + rr[1]**2 + rr[2]**2)**0.5
     w_unit=numpy.cross(rr,vv)/numpy.linalg.norm(numpy.cross(rr,vv))
-    s_unit=numpy.cross(w_unit,r_unit)
+    s_unit=numpy.cross(r_unit,w_unit)
 
-    t_h = vv / numpy.linalg.norm( vv )                                          # velocity versoe
-    h_h = numpy.cross( rr, vv ) / numpy.linalg.norm(numpy.cross(rr, vv ) )           # angular momentum veror
-    n_h = numpy.cross( h_h, t_h ) 
+    #print("\n",numpy.linalg.norm(r_unit),"|",numpy.linalg.norm(w_unit),"|",numpy.linalg.norm(s_unit))
+    # t_h = vv / numpy.linalg.norm( vv )                                          # velocity versoe
+    # h_h = numpy.cross( rr, vv ) / numpy.linalg.norm(numpy.cross(rr, vv ) )           # angular momentum veror
+    # n_h = numpy.cross( h_h, t_h ) 
+
+
+    # matrix to convert from IJK frame to RSW frame
+    Rot_RSW = numpy.vstack([r_unit, s_unit, w_unit])
 
 
 
-    Rot_RSW=numpy.concatenate((r_unit, s_unit, w_unit)).reshape((-1, 3), order='F')
-    Rot_RSW=numpy.concatenate((t_h, h_h, n_h)).reshape((-1, 3), order='F')
-    F_J=numpy.matmul(Rot_RSW,a_per)
+    # Convert J2 perturbation from RSW to IJK frame
+    F_J= numpy.matmul(Rot_RSW, a_J)
+
+
+    #Rot_RSW=numpy.concatenate((t_h, h_h, n_h)).reshape((-1, 3), order='F')
+    #F_J=numpy.matmul(Rot_RSW_temp,a_per)
     #F_J=numpy.zeros(3)
     FR=F_J[0]
     FS=F_J[1]
     FW=F_J[2]
+
+    # print(FR,"|",FS,"|",F_J)
 
     
     y_dot[0]=(2/(n*numpy.sqrt(1-e**2)))*((e*numpy.sin(theta)*FR)+(p/r)*FS)
@@ -504,7 +514,7 @@ def guess_nonsingular_Bmat(t,yy,param):
 
 # # References frames and convertions
 
-def Lagrange_deri(t,yy,param,q1_0,q2_0,t0,t):
+def Lagrange_deri(t,yy,param,q1_0,q2_0,t0):
     # Guass planetary equations
     # Input, 
     # t - time
@@ -516,7 +526,7 @@ def Lagrange_deri(t,yy,param,q1_0,q2_0,t0,t):
 
     # data={"J":[J2,J3,J4],"S/C":[M_SC,A_cross,C_D,Ballistic coefficient],"Primary":[mu,RE.w]}
     data={"J":[0.1082626925638815e-2,0,0],"S/C":[300,2,0.9,300],"Primary":[3.98600433e5,6378.16,7.2921150e-5]}
-    mu=param
+    mu=data["Primary"][0]
     y_dot=numpy.zeros((6,))
     epsilon =  data["J"][0]
 
@@ -631,8 +641,15 @@ def Lagrange_deri(t,yy,param,q1_0,q2_0,t0,t):
                          [term_q2_a,0,term_q2_i,term_q2_q1,term_q2_q2,0],
                          [term_OM_a,0,term_OM_i,term_OM_q1,term_OM_q2,0]])
         
-    return y_dot
+    return A_mat
 
+def Dynamics(t,yy,param,q1_0,q2_0,t0):
+    A=Lagrange_deri(t,yy,param,q1_0,q2_0,t0)
+    B=guess_nonsingular_Bmat(t,yy,param)
+    
+    y_dot=numpy.matmul(A,yy)+numpy.matmul(B,numpy.array([q1_0,q2_0,t0]))
+
+    return 
 
 
 def Cart2RO(RO,OE_1):
@@ -647,7 +664,7 @@ def Cart2RO(RO,OE_1):
 
     # data={"J":[J2,J3,J4],"S/C":[M_SC,A_cross,C_D,Ballistic coefficient],"Primary":[mu,RE.w]}
     data={"J":[0.1082626925638815e-2,0,0],"S/C":[300,2,0.9,300],"Primary":[3.98600433e5,6378.16,7.2921150e-5]}
-    mu=param
+    mu=data["Primary"][0]
     y_dot=numpy.zeros((6,))
     epsilon =  data["J"][0]
 
@@ -681,8 +698,52 @@ def Cart2RO(RO,OE_1):
     Vr = (h/p) * (q1*numpy.sin(u)-q2*numpy.cos(u))
     Vt = (h/p) * (1+q1*numpy.cos(u)+q2*numpy.sin(u))
     
-    x = (r/a)* RO[0]+ (Vr/Vt)*r*
+    #x = (r/a)* RO[0]+ (Vr/Vt)*r*
 
     return y_dot
 
-# create a simple function to do quick sort of the array and return the index of the sorted array   
+
+
+# converts the design parameters to relative orbital elements
+
+
+def Param2NROE(NOE, parameters,data):
+
+    # NOE=numpy.array([a,lambda_0,i,q1,q2,omega]) unpack this
+    a, lambda_, i, q1, q2, omega = NOE
+    
+    # Unpacking the parameters
+
+    rho_1, rho_2, rho_3, alpha_0, beta_0,v_d = parameters
+    
+    mu=data["Primary"][0]
+
+    eta = 1 - q1**2 - q2**2
+
+    n = numpy.sqrt(1 - eta)
+
+    e=numpy.sqrt(q1**2 + q2**2)
+    h=numpy.sqrt(mu*a*(1-e**2))
+    term1=(h**2)/(mu)
+    p=term1
+
+    delta_a = (-2 * eta * v_d) / (3 * n)
+    
+    # Equation 16 (uses 'omega' from orbital elements)
+    delta_Omega = (-rho_3 * numpy.sin(beta_0)) / (p * numpy.sin(i))
+    
+    # Equation 12 (uses 'lambda_' from orbital elements)
+    delta_lambda = (rho_2 / p) - delta_Omega * numpy.cos(i) - ((1 + eta + eta**2) / (1 + eta)) * (rho_1 / p) * (q1 * numpy.cos(alpha_0) - q2 * numpy.sin(alpha_0))
+    
+    # Equation 13
+    delta_i = (rho_3 / p) * numpy.cos(beta_0)
+    
+    # Equation 14
+    delta_q1 = -(1 - q1**2) * (rho_1 / p) * numpy.sin(alpha_0) + q1 * q2 * (rho_1 / p) * numpy.cos(alpha_0) - q2 * (rho_2 / p - delta_Omega * numpy.cos(i))
+    
+    # Equation 15
+    delta_q2 = -(1 - q2**2) * (rho_1 / p) * numpy.cos(alpha_0) + q1 * q2 * (rho_1 / p) * numpy.sin(alpha_0) + q1 * (rho_2 / p - delta_Omega * numpy.cos(i))
+    
+    # Return as vector
+    return numpy.array([delta_a, delta_lambda, delta_i, delta_q1, delta_q2, delta_Omega])
+

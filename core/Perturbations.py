@@ -27,6 +27,7 @@ def aspherical_perturbation(rr,data,n):
     # Zonal Harmonics upto J6
 
     # J2 perturbation
+    
 
     a2=numpy.zeros(3)
 
@@ -34,7 +35,8 @@ def aspherical_perturbation(rr,data,n):
     term2=5*(rr[2]**2)/(r**2)
     a2[0]=-term1*(rr[0]/r)*(1-term2)
     a2[1]=-term1*(rr[1]/r)*(1-term2)
-    a2[2]=-term1*(rr[2]/r)*(3-term2)
+    a2[2]=-term1*(rr[2]/r)*(1-term2)
+
 
 
     # we can extend the perturbation terms to include J3, J4, J5 ... effects
