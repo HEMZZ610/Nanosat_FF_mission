@@ -104,6 +104,57 @@ def kep2car(COE,mu):
 
     return (RR,VV)
 
+def NSROE2car(ROE,param):
+    # Guass planetary equations
+    # Input, 
+    # t - time
+    # x0 - state vector
+    # param is a tuple 3 x 1
+    # param[0] - COE vector - [angular momentum, eccentricity, inclination, RAAN, argument of perigee, true anomaly]
+    # param[1] - J2 constant value
+    # param[0] - list of information related to Earth [mu, radius]
+
+    mu=param["Primary"][0]
+    y_dot=numpy.zeros((6,))
+
+
+
+    # assigning the state variables
+    a = ROE[0]
+    l = ROE[1]
+    i = ROE[2]
+    q1 = ROE[3]
+    q2 = ROE[4]
+    OM = ROE[5]
+
+
+
+    e=numpy.sqrt(q1**2 + q2**2)
+    h=numpy.sqrt(mu*a*(1-e**2))
+    term1=(h**2)/(mu)
+    neta = 1- q1**2 - q2**2
+    p=term1
+    rp=a*(1-e)
+    r = ( a*neta**2 ) / (1+q1)
+    n = numpy.sqrt(mu/(a**3))
+
+    omega_peri = numpy.arccos(q1 / e)
+    mean_anamoly = l-omega_peri
+    theta_tuple = M2theta(mean_anamoly,e,1e-8)
+    theta =theta_tuple[0]
+    u=theta+omega_peri
+    
+    # obtaining position and velocity vector in perifocan reference frame
+    rp = ( h ** 2 / mu ) * ( 1 / ( 1 + e * numpy.cos( u ) ) ) * ( numpy.cos( u ) * numpy.array([ 1 , 0 ,0 ])
+        + numpy.sin( u ) * numpy.array([ 0, 1, 0 ]) )
+    vp = ( mu / h ) * ( -numpy.sin( u ) * numpy.array([ 1 , 0 , 0 ]) + ( e + numpy.cos( u ) ) * numpy.array([ 0 , 1 , 0 ]) ) ;
+
+
+    RR=numpy.matmul(PQW2ECI(OM,omega_peri,i),numpy.transpose(rp))
+    VV=numpy.matmul(PQW2ECI(OM,omega_peri,i),numpy.transpose(vp))
+
+    return (RR,VV)
+
 
 
 def twobp_cart(t,r0,mu):
@@ -215,7 +266,7 @@ def gauss_eqn(t,yy,param):
     # perturbations
     a_J=aspherical_perturbation(rr,data,1)
     a_drag=numpy.zeros(3) #atmosphheric_drag(rr,vv,data)
-    # a_J = numpy.zeros(3)
+    a_J = numpy.zeros(3)
     a_per = a_J 
 
     #F_J=numpy.matmul(RSW2ECI(om,OM,i,theta),a_per)
@@ -343,7 +394,7 @@ def guess_nonsingular(t,yy,param):
     r = ( a*neta**2 ) / (1+q1)
     n = numpy.sqrt(mu/(a**3))
 
-    omega_peri = numpy.arcsin(q1 / e)
+    omega_peri = numpy.arccos(q1 / e)
     mean_anamoly = l-omega_peri
     theta_tuple = M2theta(mean_anamoly,e,1e-8)
     theta =theta_tuple[0]
@@ -442,7 +493,7 @@ def guess_nonsingular_Bmat(t,yy,param):
     r = ( a*neta**2 ) / (1+q1)
     n = numpy.sqrt(mu/(a**3))
 
-    omega_peri = numpy.arcsin(q1 / e)
+    omega_peri = numpy.arccos(q1 / e)
     mean_anamoly = l-omega_peri
     theta_tuple = M2theta(mean_anamoly,e,1e-8)
     theta =theta_tuple[0]
@@ -535,7 +586,7 @@ def lagrage_J2_diff(t,yy,data):
     r = ( a*eta**2 ) / (1+q1)
     n = numpy.sqrt(mu/(a**3))
 
-    omega_peri = numpy.arcsin(q1 / e)
+    omega_peri = numpy.arccos(q1 / e)
     mean_anamoly = l-omega_peri
     theta_tuple = M2theta(mean_anamoly,e,1e-8)
     theta =theta_tuple[0]
@@ -597,7 +648,7 @@ def Lagrange_deri(t,yy,param,q1_0,q2_0,t0):
     r = ( a*neta**2 ) / (1+q1)
     n = numpy.sqrt(mu/(a**3))
 
-    omega_peri = numpy.arcsin(q1 / e)
+    omega_peri = numpy.arccos(q1 / e)
     mean_anamoly = l-omega_peri
     theta_tuple = M2theta(mean_anamoly,e,1e-8)
     theta =theta_tuple[0]
@@ -743,7 +794,7 @@ def Cart2RO(RO,OE_1):
     r = ( a*neta**2 ) / (1+q1)
     n = numpy.sqrt(mu/(a**3))
 
-    omega_peri = numpy.arcsin(q1 / e)
+    omega_peri = numpy.arccos(q1 / e)
     mean_anamoly = l-omega_peri
     theta_tuple = M2theta(mean_anamoly,e,1e-8)
     theta =theta_tuple[0]
@@ -841,7 +892,7 @@ def NSROE2Cart(NSROE,NSROE0,x_vec_init,data):
     r = ( a*eta**2 ) / (1+q1)
     n = numpy.sqrt(mu/(a**3))
 
-    omega_peri = numpy.arcsin(q1 / e)
+    omega_peri = numpy.arccos(q1 / e)
     mean_anamoly = lambda_-omega_peri
     theta_tuple = M2theta(mean_anamoly,e,1e-8)
     f =theta_tuple[0]

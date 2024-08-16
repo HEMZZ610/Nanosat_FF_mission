@@ -50,7 +50,7 @@ h0 = numpy.sqrt(mu*CEO_0[0]*(1-CEO_0[1]**2))  # [km]    Angular momentum axis of
 
 
 Torb = 2*numpy.pi*numpy.sqrt(CEO_0[0]**3/mu)    # [s]    Orbital period
-n_revolution=500
+n_revolution=100
 T_total=n_revolution*Torb
 
 # test for gauess equation

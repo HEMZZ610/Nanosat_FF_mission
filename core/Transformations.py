@@ -62,3 +62,12 @@ def RSW2ECI(OM,om,i,theta):
     return C_org
 
 
+# Add frames here
+
+# LVLH FRAME
+
+
+# FRENET FRAME
+
+
+# BODY FIXED FRAME

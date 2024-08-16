@@ -22,13 +22,13 @@ import math
 Library= os.path.join(os.path.dirname(os.path.abspath(__file__)),"../core")
 sys.path.insert(0, Library)
 
-from TwoBP import car2kep, kep2car, twobp_cart, gauss_eqn, Event_COE, theta2M, guess_nonsingular, M2theta, Param2NROE, guess_nonsingular_Bmat, lagrage_J2_diff, absolute_NSROE_dynamics
+from TwoBP import car2kep, kep2car, twobp_cart, gauss_eqn, Event_COE, theta2M, guess_nonsingular, M2theta, Param2NROE, guess_nonsingular_Bmat, lagrage_J2_diff, absolute_NSROE_dynamics ,NSROE2car
 
 
 # Parameters that is of interest to the problem
 
 data={"J":[0.1082626925638815e-2,0,0],"S/C":[300,2,0.9,300],"Primary":[3.98600433e5,6378.16,7.2921150e-5]}
-
+deg2rad = numpy.pi / 180
 
 # CHECK Formation Establishment and Reconfiguration Using
 # Differential Elements in J2-Perturbed Orbits and SENGUPTA
@@ -39,7 +39,9 @@ data={"J":[0.1082626925638815e-2,0,0],"S/C":[300,2,0.9,300],"Primary":[3.9860043
 
 # Deputy spacecraft relative orbital  elements/ LVLH initial conditions
 # NOE_chief = numpy.array([a,lambda_0,i,q1,q2,omega])
-NOE_chief = numpy.array([6803.1366,0,97.04,0.005,0,270.828])
+NOE_chief = numpy.array([6803.1366,0,63.45,0.005,0,270.828]) # numpy.array([6803.1366,0,97.04,0.005,0,270.828])
+## MAKE SURE TO FOLLOW RIGHT orbital elements order
+
 
 # Design parameters for the formation - Sengupta and Vadali 2007 Relative Motion and the Geometry of Formations in Keplerian Elliptic Orbits
 
@@ -64,7 +66,8 @@ yy_o=NOE_chief
 # test for gauess equation
 mu=data["Primary"][0]
 Torb = 2*numpy.pi*numpy.sqrt(NOE_chief[0]**3/mu)    # [s]    Orbital period
-n_revolution=10
+n_revol_T = 24*60*60/Torb
+n_revolution=100 #n_revol_T
 T_total=n_revolution*Torb
 
 t_span=[0,T_total]
@@ -83,21 +86,11 @@ rr_s=numpy.zeros((3,len(sol.y[0])))
 vv_s=numpy.zeros((3,len(sol.y[0])))
 
 for i in range(0,len(sol.y[0])):
-    e=numpy.sqrt(sol.y[3][i]**2 + sol.y[4][i]**2)
-    h=numpy.sqrt(mu*sol.y[0][i]*(1-e**2))
-    term1=(h**2)/(mu)
-
-    omega_peri = numpy.arcsin(sol.y[3][i]**2/ e)
-    mean_anamoly = sol.y[1][i]-omega_peri
-    theta_tuple = M2theta(mean_anamoly,e,1e-8)
-    theta =theta_tuple[0]
-    u=theta+omega_peri
-
-
-
-    if sol.y[5][i]>2*numpy.pi:
-        sol.y[5][i]=sol.y[5][i]-2*numpy.pi     
-    rr_s[:,i],vv_s[:,i]=kep2car(numpy.array([h,e,i,sol.y[5][i],omega_peri,theta]),mu)
+    # if sol.y[5][i]>2*numpy.pi:
+    #     sol.y[5][i]= 
+ 
+    rr_s[:,i],vv_s[:,i]=NSROE2car(numpy.array([sol.y[0][i],sol.y[1][i],sol.y[2][i],
+                                               sol.y[3][i],sol.y[4][i],sol.y[5][i]]),data)
 
     # h = COE[0]
     # e =COE[1]
@@ -121,12 +114,23 @@ X_Earth = r_Earth * numpy.cos(phi) * numpy.sin(theta)
 Y_Earth = r_Earth * numpy.sin(phi) * numpy.sin(theta)
 Z_Earth = r_Earth * numpy.cos(theta)
 
+# draw the unit vectors of the ECI frame on the 3d plot of earth
+
+
+
 # Plotting Earth and Orbit
 fig = plt.figure(1)
 ax = plt.axes(projection='3d')
 ax.plot_surface(X_Earth, Y_Earth, Z_Earth, color='blue', alpha=0.7)
+# x-axis
+ax.quiver(0, 0, 0, 1e4, 0, 0, color='r', label='X-axis')
+# y-axis
+ax.quiver(0, 0, 0, 0, 1e4, 0, color='g', label='Y-axis')
+# z-axis
+ax.quiver(0, 0, 0, 0, 0, 1e4, color='b', label='Z-axis')
 # plotting
 ax.plot3D(rr_s[0],rr_s[1],rr_s[2] , 'black', linewidth=2, alpha=1)
+
 ax.set_title('two body trajectory')
 
 
@@ -154,7 +158,7 @@ axs[0].set_title('semi major axis')
 
 # Plot data on the second subplot
 axs[1].plot(teval, sol.y[1])
-axs[1].set_title('eccentricity')
+axs[1].set_title('mean true latitude')
 
 axs[2].plot(teval, sol.y[2])
 axs[2].set_title('inclination')
@@ -164,14 +168,14 @@ fig, axs = plt.subplots(3, 1)
 
 # Plot data on the first subplot
 axs[0].plot(teval, sol.y[3])
-axs[0].set_title('RAAN')
+axs[0].set_title('q1')
 
 # Plot data on the second subplot
 axs[1].plot(teval, sol.y[4])
-axs[1].set_title('omega')
+axs[1].set_title('q2')
 
 axs[2].plot(teval, sol.y[5])
-axs[2].set_title('True Anamoly')
+axs[2].set_title('right ascenstion of ascending node')
 
 plt.show()
 
