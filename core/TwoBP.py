@@ -418,7 +418,7 @@ def guess_nonsingular_Bmat(t,yy,param):
     # param[1] - J2 constant value
     # param[0] - list of information related to Earth [mu, radius]
 
-    mu=param
+    mu=param["Primary"][0]
     y_dot=numpy.zeros((6,))
 
 
@@ -479,37 +479,83 @@ def guess_nonsingular_Bmat(t,yy,param):
     FS=F_J[1]
     FW=F_J[2]
 
+    y_dot_0 = numpy.array([((2 * a**2) / h) * ((q1 * numpy.sin(u)) - q2 * numpy.cos(u)), (p / r) * FS, 0])
 
-    
-    y_dot_0=numpy.array([((2*a**2) / h) * (((q1*numpy.sin(u))-q2*numpy.cos*(u)), +(p/r)*FS),0])
+    t1 = (-p / h * (1 + neta)) * (q1 * numpy.cos(u) + q2 * numpy.sin(u)) - ((2 * neta * r) / h)
+    t2 = ((p + r) / h * (1 + neta)) * (q1 * numpy.sin(u) - q2 * numpy.cos(u))
+    t3 = (r * numpy.sin(u) * numpy.cos(i)) / (h * numpy.sin(i))
+    y_dot_1 = numpy.array([t1, t2, -t3])
 
-    t1= ((-p/h*(1+neta))*(q1*numpy.cos(u)+q2*numpy.sin(u))-((2*neta*r)/h))
-    t2=((p+r)/h*(1+neta))*(q1*numpy.sin(u)-q2*numpy.cos(u))
-    t3=((r*numpy.sin(u)*numpy.cos(i))/(h*numpy.sin(i)))
-    y_dot_1=numpy.array([t1,+t2,-t3 ])
+    y_dot_2 = numpy.array([0, 0, (r * numpy.cos(u)) / h])
 
-    y_dot_2=numpy.array([0,0,((r*numpy.cos(u))/h)])
+    t1 = (p * numpy.sin(u)) / h
+    t2 = ((p + r) / h) * (numpy.cos(u) + r * q1)
+    t3 = (r * q2 * numpy.sin(u) * numpy.cos(i)) / (h * numpy.sin(i))
+    y_dot_3 = numpy.array([t1, t2, t3])
 
-    t1= ((p*numpy.sin(u))/h)
-    t2=((p+r)/h)*(numpy.cos(u)+r*q1)
-    t3=((r*q2*numpy.sin(u)*numpy.cos(i))/(h*numpy.sin(i)))
+    t1 = (p * numpy.cos(u)) / h
+    t2 = ((p + r) / h) * (numpy.cos(u) + r * q2)
+    t3 = (r * q1 * numpy.sin(u) * numpy.cos(i)) / (h * numpy.sin(i))
+    y_dot_4 = numpy.array([-t1, t2, -t3])
 
-    y_dot_3=numpy.array([t1,t2,+t3])
+    y_dot_5 = numpy.array([0, 0, (r * numpy.cos(u)) / (h * numpy.sin(i))])
 
-    t1= ((p*numpy.cos(u))/h)
-    t2=((p+r)/h)*(numpy.cos(u)+r*q2)
-    t3=((r*q1*numpy.sin(u)*numpy.cos(i))/(h*numpy.sin(i)))
-    
-    y_dot_4=numpy.array([-t1 + t2 ,- t3 ])
-
-    y_dot_5=numpy.array([0,0,((r*numpy.cos(u))/(h*numpy.sin(i)))])
-    
-    B_mat=numpy.vstack([y_dot_0,y_dot_1,y_dot_2,y_dot_3,y_dot_4,y_dot_5])
-    
+    B_mat = numpy.vstack([y_dot_0, y_dot_1, y_dot_2, y_dot_3, y_dot_4, y_dot_5])
+        
     return B_mat
 
-# def lagrage_J2_diff():
+def lagrage_J2_diff(t,yy,data):
+    
+    f_dot=numpy.zeros(6)
+    # data={"J":[J2,J3,J4],"S/C":[M_SC,A_cross,C_D,Ballistic coefficient],"Primary":[mu,RE.w]}
+    data={"J":[0.1082626925638815e-2,0,0],"S/C":[300,2,0.9,300],"Primary":[3.98600433e5,6378.16,7.2921150e-5]}
+    mu=data["Primary"][0]
+    Re=data["Primary"][1]
+    y_dot=numpy.zeros((6,))
+    J2 =  data["J"][0]
+
+
+
+    # assigning the state variables
+    a = yy[0]
+    l = yy[1]
+    i = yy[2]
+    q1 = yy[3]
+    q2 = yy[4]
+    OM = yy[5]
+
+
+
+    e=numpy.sqrt(q1**2 + q2**2)
+    h=numpy.sqrt(mu*a*(1-e**2))
+    term1=(h**2)/(mu)
+    eta = 1- q1**2 - q2**2
+    p=term1
+    rp=a*(1-e)
+    r = ( a*eta**2 ) / (1+q1)
+    n = numpy.sqrt(mu/(a**3))
+
+    omega_peri = numpy.arcsin(q1 / e)
+    mean_anamoly = l-omega_peri
+    theta_tuple = M2theta(mean_anamoly,e,1e-8)
+    theta =theta_tuple[0]
+    u=theta+omega_peri
+
+    # Compute each component
+    component_1 = 0
+    component_2 = n + (3/4) * J2 * (Re / p)**2 * n * (eta * (3 * numpy.cos(i)**2 - 1) + (5 * numpy.cos(i)**2 - 1))
+    component_3 = 0
+    component_4 = - (3/4) * J2 * (Re / p)**2 * n * (3 * numpy.cos(i)**2 - 1) * q2
+    component_5 = (3/4) * J2 * (Re / p)**2 * n * (3 * numpy.cos(i)**2 - 1) * q1
+    component_6 = - (3/2) * J2 * (Re / p)**2 * n * numpy.cos(i)
+    
+    # Combine components into a vector
+    f_dot = numpy.array([component_1, component_2, component_3, component_4, component_5, component_6])
+    
+    return f_dot
 #     return 0
+
+
 
 
 # # References frames and convertions
@@ -651,6 +697,14 @@ def Dynamics(t,yy,param,q1_0,q2_0,t0):
 
     return 
 
+def absolute_NSROE_dynamics(t,yy,param):
+    
+    A=lagrage_J2_diff(t,yy,param)
+    B=guess_nonsingular_Bmat(t,yy,param)
+    y_dot=A+numpy.matmul(B,numpy.array([0,0,0]))
+
+    return y_dot
+
 
 def Cart2RO(RO,OE_1):
     # Guass planetary equations
@@ -747,3 +801,106 @@ def Param2NROE(NOE, parameters,data):
     # Return as vector
     return numpy.array([delta_a, delta_lambda, delta_i, delta_q1, delta_q2, delta_Omega])
 
+
+
+# Convert from NSROE to Cartesian
+
+def NSROE2Cart(NSROE,NSROE0,x_vec_init,data):
+    
+    a, lambda_, i, q1, q2, omega =NSROE 
+    a0, lambda_0, i0, q1_0, q2_0, omega_0 =NSROE0
+    x_0, y_0, z_0, x_dot_0, y_dot_0, z_dot_0 = x_vec_init
+    
+    mu = data["Primary"][0]
+
+    # initial parameters
+    e0=numpy.sqrt(q1_0**2 + q2_0**2)
+    h0=numpy.sqrt(mu*a0*(1-e0**2))
+    term1_0=(h0**2)/(mu)
+    eta0 = 1- q1_0**2 - q2_0**2
+    p0=term1_0
+    rp0=a0*(1-e0)
+    r = ( a0*eta0**2 ) / (1+q1_0)
+    n0 = numpy.sqrt(mu/(a0**3))
+
+    omega_peri0 = numpy.arcsin(q1_0 / e0)
+    mean_anamoly0 = lambda_0-omega_peri0
+    theta_tuple0 = M2theta(mean_anamoly0,e0,1e-8)
+    f0 =theta_tuple0[0]
+    theta_0=f0+omega_peri0
+    E0 = 2*numpy.arctan(numpy.tan(f0/2)*numpy.sqrt((1-e0)/(1+e0)))
+    F0 = omega_peri0 + E0 
+
+    # current parameters
+    e=numpy.sqrt(q1**2 + q2**2)
+    h=numpy.sqrt(mu*a*(1-e**2))
+    term1=(h**2)/(mu)
+    eta = 1- q1**2 - q2**2
+    p=term1
+    rp=a*(1-e)
+    r = ( a*eta**2 ) / (1+q1)
+    n = numpy.sqrt(mu/(a**3))
+
+    omega_peri = numpy.arcsin(q1 / e)
+    mean_anamoly = lambda_-omega_peri
+    theta_tuple = M2theta(mean_anamoly,e,1e-8)
+    f =theta_tuple[0]
+    theta=f+omega_peri
+    E = 2*numpy.arctan(numpy.tan(f/2)*numpy.sqrt((1-e)/(1+e)))
+
+    F = omega_peri + E 
+    # Calculate alpha
+    alpha_val = lambda q1,q2,theta: 1 + q1 * numpy.cos(theta) + q2 * numpy.cos(theta)
+    
+    # Calculate beta
+    beta_val =  lambda q1,q2,theta: q1 * numpy.sin(theta) - q2 * numpy.cos(theta)
+    
+    # Calculate K(θ)
+    K_val = lambda q1,q2,theta,F,F0 : (F - q1 * numpy.sin(F) + q2 * numpy.cos(F)) - (F0 - q1 * numpy.sin(F0) + q2 * numpy.cos(F0)) #  (lambda_ - lambda0)
+    
+    e = numpy.sqrt(q1**2 + q2**2)
+
+
+    # Calculate c1
+    c1 = - (3 / ((eta **2 )*  alpha_val(q1,q2,theta_0))) * \
+         (q1*(1 + numpy.cos(theta_0)**2) + q2*numpy.cos(theta_0)*numpy.sin(theta_0) + \
+         (2 - eta**2) * numpy.cos(theta_0)) * x_0 - \
+         (1/eta**2) *(-q2*(1 + numpy.cos(theta_0)**2) + q1*numpy.cos(theta_0)*numpy.sin(theta_0)+numpy.sin(theta_0))*x_dot_0 - \
+         (1/eta**2) *(q1*(1 + numpy.cos(theta_0)**2) + q2*numpy.cos(theta_0)*numpy.sin(theta_0)+2*numpy.cos(theta_0))*y_dot_0
+
+    # Calculate c2 
+    c2 = - (3 / ((eta **2 )*  alpha_val(q1,q2,theta_0))) * \
+         (q2*(1 + numpy.sin(theta_0)**2) + q1*numpy.cos(theta_0)*numpy.sin(theta_0) + \
+         (2 - eta**2) * numpy.sin(theta_0)) * x_0 - \
+         (1/eta**2) *(q1*(1 + numpy.sin(theta_0)**2) - q2*numpy.cos(theta_0)*numpy.sin(theta_0)-numpy.cos(theta_0))*x_dot_0 - \
+         (1/eta**2) *(q2*(1 + numpy.sin(theta_0)**2) + q1*numpy.cos(theta_0)*numpy.sin(theta_0)+2*numpy.sin(theta_0))*y_dot_0
+
+    # Calculate c3
+    c3 = (2 + 3 * e * numpy.cos(theta_0) + e**2) * x_0 + \
+         e * numpy.sin(theta_0) * (1 + e * numpy.cos(theta_0)) * x_dot_0 + \
+         (1 + e * numpy.cos(theta_0))**2 * y_dot_0
+
+    # Calculate c4
+    c4 = -(1/eta**2)*(1+alpha_val(q1,q2,theta_0)) * \
+                    (((3*beta_val(q1,q2,theta_0)/alpha_val(q1,q2,theta_0))) *x_0 + \
+                    (2-alpha_val(q1,q2,theta_0)) * x_dot_0 + beta_val(q1,q2,theta_0) * y_dot_0) + y_0
+                    
+
+    c5 = numpy.cos(theta_0)* z_0 - numpy.sin(theta_0) * z_dot_0
+
+    c6 = numpy.sin(theta_0)* z_0 + numpy.cos(theta_0) * z_dot_0
+    
+    # Calculate x(θ)
+    x_theta_val = (c1 * numpy.cos(theta) + c2 * numpy.sin(theta)) * alpha_val(q1,q2,theta) + \
+                  (2 * c3 / eta**2) * (1 - (3 / (2 * eta**2)) * beta_val(q1,q2,theta) * alpha_val(q1,q2,theta) * K_val(q1,q2,theta,F,F0))
+    
+    # Calculate y(θ)
+    y_theta_val = (-c1 * numpy.sin(theta) + c2 * numpy.cos(theta)) * (1+alpha_val(q1,q2,theta)) - \
+                  (3 * c3 / eta**2) * (alpha_val(q1,q2,theta)**2) * K_val(q1,q2,theta,F,F0) + c4
+    
+    # Calculate z(θ)
+    z_theta_val = c3 * numpy.cos(theta) + c6 * numpy.sin(theta)
+
+    
+    # Return x(θ), y(θ), z(θ) as a numpy vector
+    return numpy.array([x_theta_val, y_theta_val, z_theta_val])
