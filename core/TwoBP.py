@@ -273,7 +273,7 @@ def gauss_eqn(t,yy,param):
     # Vallado page: 164 convcersion -RSW frame
     r_unit=rr / (rr[0]**2 + rr[1]**2 + rr[2]**2)**0.5
     w_unit=numpy.cross(rr,vv)/numpy.linalg.norm(numpy.cross(rr,vv))
-    s_unit=numpy.cross(r_unit,w_unit)
+    s_unit=numpy.cross(w_unit,r_unit)
 
     #print("\n",numpy.linalg.norm(r_unit),"|",numpy.linalg.norm(w_unit),"|",numpy.linalg.norm(s_unit))
     # t_h = vv / numpy.linalg.norm( vv )                                          # velocity versoe
@@ -611,7 +611,7 @@ def lagrage_J2_diff(t,yy,data):
 
 # # References frames and convertions
 
-def Lagrange_deri(t,yy,param,q1_0,q2_0,t0):
+def Lagrange_deri(t,yy,param):
     # Guass planetary equations
     # Input, 
     # t - time
@@ -636,6 +636,10 @@ def Lagrange_deri(t,yy,param,q1_0,q2_0,t0):
     q1 = yy[3]
     q2 = yy[4]
     OM = yy[5]
+
+    q1_0 = param["Init"][0]
+    q2_0 = param["Init"][1]
+    t0 = param["Init"][2]
 
 
 
@@ -695,7 +699,7 @@ def Lagrange_deri(t,yy,param,q1_0,q2_0,t0):
     term_l_a_2= ((21*epsilon)/(8*a)) * (neta*((3*numpy.cos(i)**2)-1)+((5*numpy.cos(i)**2)-1)) 
     term_l_a= term_l_a_1 - term_l_a_2 
 
-    term_l_i= ((-3*epsilon)/4)(3*neta+5)*numpy.sin(2*i)
+    term_l_i= ((-3*epsilon)/4)*(3*neta+5)*numpy.sin(2*i)
 
     term_l_q1_1 = ((3*epsilon)/(4*neta**2)) * (3*neta*((3*numpy.cos(i)**2)-1)+4*((5*numpy.cos(i)**2)-1)) 
     term_l_q1 = term_l_q1_1   
@@ -704,7 +708,7 @@ def Lagrange_deri(t,yy,param,q1_0,q2_0,t0):
     term_l_q2 = term_l_q2_1 * q2  
 
     term_q1_a_1 = ((21*epsilon)/(8*a)) * (((5*numpy.cos(i)**2)-1)) 
-    term_q1_a = term_q1_a * q2
+    term_q1_a = term_q1_a_1 * q2
 
     term_q1_i = ((15*epsilon)/(4)) * q2* (numpy.sin(2*i)) 
 
@@ -721,7 +725,7 @@ def Lagrange_deri(t,yy,param,q1_0,q2_0,t0):
     term_q2_q1 = ((3*epsilon)/(4)) *(1+((4*q2**2)/neta**2))* (((5*numpy.cos(i)**2)-1)) 
 
     term_q2_q2_1 = ((3*epsilon)/(neta**2)) * (((5*numpy.cos(i)**2)-1)) 
-    term_q2_q2 = term_q1_q2 * q1 * q2
+    term_q2_q2 = term_q2_q2_1 * q1 * q2
 
     term_OM_a= ((21*epsilon)/(4*a)) *  numpy.cos(i) 
 
@@ -740,13 +744,33 @@ def Lagrange_deri(t,yy,param,q1_0,q2_0,t0):
         
     return A_mat
 
-def Dynamics(t,yy,param,q1_0,q2_0,t0):
-    A=Lagrange_deri(t,yy,param,q1_0,q2_0,t0)
-    B=guess_nonsingular_Bmat(t,yy,param)
-    
-    y_dot=numpy.matmul(A,yy)+numpy.matmul(B,numpy.array([q1_0,q2_0,t0]))
+def yaw_dynamics(t,yy,param):
 
-    return 
+    Izc=param["sat"][0]
+    Izd=param["sat"][1]
+
+    y_dot=numpy.zeros((2,))
+
+    y_dot[0]=-Izc*yy[0]
+    y_dot[1]=-Izd*yy[1]
+
+    return y_dot
+
+def Dynamics(t,yy,param):
+
+
+    y_dot_chief=absolute_NSROE_dynamics(t,yy[6:12],param)
+    
+    A=Lagrange_deri(t,yy[6:12],param)
+    B=guess_nonsingular_Bmat(t,yy[6:12],param)
+    
+    y_dot_yaw=yaw_dynamics(t,yy[12:14],param)
+    
+    y_dot=numpy.matmul(A,yy[0:6])+numpy.matmul(B,numpy.array([0,0,0]))
+
+    y = numpy.concatenate((y_dot,y_dot_chief,y_dot_yaw))
+
+    return y
 
 def absolute_NSROE_dynamics(t,yy,param):
     
@@ -955,3 +979,81 @@ def NSROE2Cart(NSROE,NSROE0,x_vec_init,data):
     
     # Return x(θ), y(θ), z(θ) as a numpy vector
     return numpy.array([x_theta_val, y_theta_val, z_theta_val])
+
+
+
+def NSROE2LVLH(NSROE,NSOE0,data):
+
+    # data={"J":[J2,J3,J4],"S/C":[M_SC,A_cross,C_D,Ballistic coefficient],"Primary":[mu,RE.w]}
+    data={"J":[0.1082626925638815e-2,0,0],"S/C":[300,2,0.9,300],"Primary":[3.98600433e5,6378.16,7.2921150e-5]}
+    mu=data["Primary"][0]
+    Re=data["Primary"][1]
+    y_dot=numpy.zeros((6,))
+    J2 =  data["J"][0]
+
+
+
+    # assigning the state variables
+    a = NSOE0[0]
+    l = NSOE0[1]
+    i = NSOE0[2]
+    q1 = NSOE0[3]
+    q2 = NSOE0[4]
+    OM = NSOE0[5]
+
+
+
+    delta_a = NSROE[0]
+    delta_lambda0 = NSROE[1]
+    delta_i = NSROE [2]
+    delta_q1 = NSROE[3]
+    delta_q2 = NSROE[4]
+    delta_Omega = NSROE[5]
+
+
+    e=numpy.sqrt(q1**2 + q2**2)
+    h=numpy.sqrt(mu*a*(1-e**2))
+    term1=(h**2)/(mu)
+    eta = 1- q1**2 - q2**2
+    p=term1
+    rp=a*(1-e)
+    r = ( a*eta**2 ) / (1+q1)
+    n = numpy.sqrt(mu/(a**3))
+
+    omega_peri = numpy.arccos(q1 / e)
+    mean_anamoly = l-omega_peri
+    theta_tuple = M2theta(mean_anamoly,e,1e-8)
+    theta =theta_tuple[0]
+    u=theta+omega_peri
+
+
+    e1 =(a / eta) * ((1 - eta**2) * delta_lambda0**2 + 2 * (q2 * delta_q1 - q1 * delta_q2) * delta_lambda0
+        - (q1 * delta_q1 + q2 * delta_q2)**2 + delta_q1**2 + delta_q2**2)**0.5
+
+
+    e2 = p * (delta_Omega * numpy.cos(i) + ( (1 + eta + eta**2) / (eta**3 * (1 + eta)) ) * (q2 * delta_q1 - q1 * delta_q2) 
+        + (1 / eta**3) * delta_lambda0 )
+
+
+    e3 =   p * (delta_i**2 + delta_Omega**2 * numpy.sin(i)**2)**0.5
+
+
+    alpha_numerator = (1 + eta) * (delta_q1 + q2 * delta_lambda0) - q1 * (q1 * delta_q1 + q2 * delta_q2)
+    
+    alpha_denominator = (1 + eta) * (delta_q2 - q1 * delta_lambda0) - q2 * (q1 * delta_q1 + q2 * delta_q2)
+    
+    alpha_0 = numpy.arctan2(  alpha_numerator, alpha_denominator)
+
+    
+    beta_0 = numpy.arctan2( - delta_Omega * numpy.sin(i) , delta_i)
+    
+    
+    x_p = (e1 / p) * numpy.sin(u + alpha_0) * (1 + q1 * numpy.cos(u) + q2 * numpy.sin(u))
+
+    
+    y_p = (e1 / p) * numpy.cos(u + alpha_0) * (2 + q1 * numpy.cos(u) + q2 * numpy.sin(u)) + (e2 / p)
+
+    
+    z_p = (e3 / p) * numpy.sin(u + beta_0)
+
+    return numpy.array([x_p, y_p, z_p])

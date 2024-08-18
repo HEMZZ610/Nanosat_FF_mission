@@ -2,7 +2,7 @@
 
 This script is used to test gauss planetary equation function present inside "TwoBP.py"
 
-Date: 25-04-2024
+Date: 16/08/2024
 
 Author:
     Vishnuvardhan Shakthibala
@@ -22,13 +22,27 @@ import math
 Library= os.path.join(os.path.dirname(os.path.abspath(__file__)),"../core")
 sys.path.insert(0, Library)
 
-from TwoBP import car2kep, kep2car, twobp_cart, gauss_eqn, Event_COE, theta2M, guess_nonsingular, M2theta, Param2NROE
+from TwoBP import (
+    car2kep, 
+    kep2car, 
+    twobp_cart, 
+    gauss_eqn, 
+    Event_COE, 
+    theta2M, 
+    M2theta, 
+    Param2NROE, 
+    guess_nonsingular_Bmat, 
+    lagrage_J2_diff, 
+    absolute_NSROE_dynamics ,
+    NSROE2car,
+    Dynamics,
+    NSROE2LVLH)
 
 
 # Parameters that is of interest to the problem
 
-data={"J":[0.1082626925638815e-2,0,0],"S/C":[300,2,0.9,300],"Primary":[3.98600433e5,6378.16,7.2921150e-5]}
-
+data={"J":[0.1082626925638815e-2,0,0],"S/C":[300,2,0.9,300],"Primary":[3.98600433e5,6378.16,7.2921150e-5],"sat":[1.2,1.2]}
+deg2rad = numpy.pi / 180
 
 # CHECK Formation Establishment and Reconfiguration Using
 # Differential Elements in J2-Perturbed Orbits and SENGUPTA
@@ -39,7 +53,9 @@ data={"J":[0.1082626925638815e-2,0,0],"S/C":[300,2,0.9,300],"Primary":[3.9860043
 
 # Deputy spacecraft relative orbital  elements/ LVLH initial conditions
 # NOE_chief = numpy.array([a,lambda_0,i,q1,q2,omega])
-NOE_chief = numpy.array([6803.1366,0,97.04,0.005,0,270.828])
+NOE_chief = numpy.array([6803.1366,0,63.45,0.005,0,270.828]) # numpy.array([6803.1366,0,97.04,0.005,0,270.828])
+## MAKE SURE TO FOLLOW RIGHT orbital elements order
+
 
 # Design parameters for the formation - Sengupta and Vadali 2007 Relative Motion and the Geometry of Formations in Keplerian Elliptic Orbits
 
@@ -48,72 +64,49 @@ rho_2 = 200 # [m]  - along-track separation
 rho_3 = 300 # [m]  - cross-track separation
 alpha = 0  # [rad] - angle between the radial and along-track separation
 beta = numpy.pi/2 # [rad] - angle between the radial and cross-track separation
-vd = -10 # Drift per revolutions m/resolution
+vd = 0 #-10 # Drift per revolutions m/resolution
 
 parameters=numpy.array([rho_1,rho_2,rho_3,alpha,beta,vd])
 
 # Initial relative orbital elements
 RNOE_0=Param2NROE(NOE_chief, parameters,data)
 
+RNOE_0[2]=-RNOE_0[5]*numpy.cos(NOE_chief[2]) 
+
+# angle of attack for the deputy spacecraft
+yaw_1 = 0 
+yaw_2 = 0 
+yaw_c_d=numpy.array([yaw_1,yaw_2])
+
 print("RELATIVE ORBITAL ELEMTNS INITIAL", RNOE_0)
 print("CHIEF INTIIAL ORBITAL ELEMENTS", NOE_chief)
 
 
-# feed it into dynamical system to get the output
 
 
-# Convert from NROE to Carterian co-ordinates. 
+# statement matrix [RNOE_0,NOE_chief,yaw_c_d]
+# [6x1,6x1,2x1]
+yy_o=numpy.concatenate((RNOE_0,NOE_chief,yaw_c_d))
 
 
-r=numpy.array([-6045,-3490,2500])
-v=numpy.array([-3.457,6.618,2.533])
-mu=398600 # gravitational parameter
-# test of RVtoOE
-COE=car2kep(r,v,mu)
-
-print(COE)
-
-
-
-rp = 200                  # [km]        Perigee distance
-R0=6378.16
-
-CEO_0=numpy.zeros(6)
-
-# orbital elements [a,e,i,RAAN,omega, theta]
-CEO_0[1] = 0.0045                 # [-]         Eccentricity
-CEO_0[0]=( rp + R0 ) / ( 1 + CEO_0[1])  
-CEO_0[2] = numpy.pi / 2                 # [rad]       Orbit inclination
-CEO_0[3] = 0.0001             # [rad]       Orbit RAAN
-CEO_0[4] = 0                  # [rad]       Orbit argument of perigee
-CEO_0[5] = 0                  # [rad]       Orbit initial true anomaly
-h0 = numpy.sqrt(mu*CEO_0[0]*(1-CEO_0[1]**2))  # [km]    Angular momentum axis of the orbit
-
-
-
-Torb = 2*numpy.pi*numpy.sqrt(CEO_0[0]**3/mu)    # [s]    Orbital period
-n_revolution=10
+# test for gauess equation
+mu=data["Primary"][0]
+Torb = 2*numpy.pi*numpy.sqrt(NOE_chief[0]**3/mu)    # [s]    Orbital period
+n_revol_T = 24*60*60/Torb
+n_revolution=25 #n_revol_T
 T_total=n_revolution*Torb
 
-a = CEO_0[0]
-M=theta2M(CEO_0[5],CEO_0[1])
-l = M+CEO_0[4]
-i = CEO_0[2]
-q1 = CEO_0[1]*numpy.sin(CEO_0[4])
-q2 = CEO_0[1]*numpy.cos(CEO_0[4])
-OM = CEO_0[3]
-
-yy_o=numpy.array([a,l,i,q1,q2,OM])
-# test for gauess equation
-
-r0=numpy.concatenate((r,v)) 
 t_span=[0,T_total]
 teval=numpy.linspace(0, T_total, 20000)
 # K=numpy.array([k1,k2])
 
-sol=integrate.solve_ivp(guess_nonsingular, t_span, yy_o,t_eval=teval,
-                        method='RK45',args=(mu,),rtol=1e-13, atol=1e-10)
+data["Init"] = [NOE_chief[4],NOE_chief[3], 0]
 
+sol=integrate.solve_ivp(Dynamics, t_span, yy_o,t_eval=teval,
+                        method='RK45',args=(data,),rtol=1e-13, atol=1e-10)
+
+
+# Convert from NROE to Carterian co-ordinates. 
 
 
 
@@ -121,21 +114,14 @@ rr_s=numpy.zeros((3,len(sol.y[0])))
 vv_s=numpy.zeros((3,len(sol.y[0])))
 
 for i in range(0,len(sol.y[0])):
-    e=numpy.sqrt(sol.y[3][i]**2 + sol.y[4][i]**2)
-    h=numpy.sqrt(mu*sol.y[0][i]*(1-e**2))
-    term1=(h**2)/(mu)
-
-    omega_peri = numpy.arcsin(sol.y[3][i]**2/ e)
-    mean_anamoly = sol.y[1][i]-omega_peri
-    theta_tuple = M2theta(mean_anamoly,e,1e-8)
-    theta =theta_tuple[0]
-    u=theta+omega_peri
-
-
-
-    if sol.y[5][i]>2*numpy.pi:
-        sol.y[5][i]=sol.y[5][i]-2*numpy.pi     
-    rr_s[:,i],vv_s[:,i]=kep2car(numpy.array([h,e,i,sol.y[5][i],omega_peri,theta]),mu)
+    # if sol.y[5][i]>2*numpy.pi:
+    #     sol.y[5][i]= 
+ 
+    # rr_s[:,i],vv_s[:,i]=NSROE2car(numpy.array([sol.y[0][i],sol.y[1][i],sol.y[2][i],
+    #                                            sol.y[3][i],sol.y[4][i],sol.y[5][i]]),data)
+    yy1=sol.y[0:6,i]
+    yy2=sol.y[6:12,i]
+    rr_s[:,i]=NSROE2LVLH(yy1,yy2,data)
 
     # h = COE[0]
     # e =COE[1]
@@ -159,14 +145,26 @@ X_Earth = r_Earth * numpy.cos(phi) * numpy.sin(theta)
 Y_Earth = r_Earth * numpy.sin(phi) * numpy.sin(theta)
 Z_Earth = r_Earth * numpy.cos(theta)
 
+# draw the unit vectors of the ECI frame on the 3d plot of earth
+
+
+
 # Plotting Earth and Orbit
 fig = plt.figure(1)
 ax = plt.axes(projection='3d')
-ax.plot_surface(X_Earth, Y_Earth, Z_Earth, color='blue', alpha=0.7)
-# plotting
+# ax.plot_surface(X_Earth, Y_Earth, Z_Earth, color='blue', alpha=0.7)
+# # x-axis
+# ax.quiver(0, 0, 0, 1e4, 0, 0, color='r', label='X-axis')
+# # y-axis
+# ax.quiver(0, 0, 0, 0, 1e4, 0, color='g', label='Y-axis')
+# # z-axis
+# ax.quiver(0, 0, 0, 0, 0, 1e4, color='b', label='Z-axis')
+# # plotting
 ax.plot3D(rr_s[0],rr_s[1],rr_s[2] , 'black', linewidth=2, alpha=1)
 ax.set_title('two body trajectory')
-
+ax.set_xlabel('x')
+ax.set_ylabel('y')
+ax.set_zlabel('z')
 
 
 
@@ -192,7 +190,7 @@ axs[0].set_title('semi major axis')
 
 # Plot data on the second subplot
 axs[1].plot(teval, sol.y[1])
-axs[1].set_title('eccentricity')
+axs[1].set_title('mean true latitude')
 
 axs[2].plot(teval, sol.y[2])
 axs[2].set_title('inclination')
@@ -202,14 +200,14 @@ fig, axs = plt.subplots(3, 1)
 
 # Plot data on the first subplot
 axs[0].plot(teval, sol.y[3])
-axs[0].set_title('RAAN')
+axs[0].set_title('q1')
 
 # Plot data on the second subplot
 axs[1].plot(teval, sol.y[4])
-axs[1].set_title('omega')
+axs[1].set_title('q2')
 
 axs[2].plot(teval, sol.y[5])
-axs[2].set_title('True Anamoly')
+axs[2].set_title('right ascenstion of ascending node')
 
 plt.show()
 

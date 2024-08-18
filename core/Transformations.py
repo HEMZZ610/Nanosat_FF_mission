@@ -65,9 +65,39 @@ def RSW2ECI(OM,om,i,theta):
 # Add frames here
 
 # LVLH FRAME
+def LVLHframe(rr,vv):
+    # rr and vv are in ECI frame
+    x_unit=rr / (rr[0]**2 + rr[1]**2 + rr[2]**2)**0.5
+    z_unit=numpy.cross(rr,vv)/numpy.linalg.norm(numpy.cross(rr,vv))
+    y_unit=numpy.cross(z_unit,x_unit)
 
+    #print("\n",numpy.linalg.norm(r_unit),"|",numpy.linalg.norm(w_unit),"|",numpy.linalg.norm(s_unit))
+    # t_h = vv / numpy.linalg.norm( vv )                                          # velocity versoe
+    # h_h = numpy.cross( rr, vv ) / numpy.linalg.norm(numpy.cross(rr, vv ) )           # angular momentum veror
+    # n_h = numpy.cross( h_h, t_h ) 
+
+
+    # matrix to convert from IJK frame to RSW frame
+    Rot_LVLH = numpy.vstack([x_unit, y_unit, z_unit])
+    return Rot_LVLH
 
 # FRENET FRAME
+def Frenetframe(rr,vv):
+    # rr and vv are in ECI frame
+    T_unit=vv / (vv[0]**2 + vv[1]**2 + vv[2]**2)**0.5
+    W_unit=numpy.cross(rr,vv)/numpy.linalg.norm(numpy.cross(rr,vv))
+    N_unit=numpy.cross(T_unit,W_unit)
 
+    #print("\n",numpy.linalg.norm(r_unit),"|",numpy.linalg.norm(w_unit),"|",numpy.linalg.norm(s_unit))
+    # t_h = vv / numpy.linalg.norm( vv )                                          # velocity versoe
+    # h_h = numpy.cross( rr, vv ) / numpy.linalg.norm(numpy.cross(rr, vv ) )           # angular momentum veror
+    # n_h = numpy.cross( h_h, t_h ) 
+
+
+    # matrix to convert from IJK frame to RSW frame
+    Rot_FrenetFrame = numpy.vstack([T_unit, N_unit, W_unit])
+    return Rot_FrenetFrame
 
 # BODY FIXED FRAME
+
+
