@@ -39,7 +39,7 @@ deg2rad = numpy.pi / 180
 
 # Deputy spacecraft relative orbital  elements/ LVLH initial conditions
 # NOE_chief = numpy.array([a,lambda_0,i,q1,q2,omega])
-NOE_chief = numpy.array([6803.1366,0,63.45,0.005,0,270.828]) # numpy.array([6803.1366,0,97.04,0.005,0,270.828])
+NOE_chief = numpy.array([6803.1366,0,90*deg2rad,0.005,0,270.828*deg2rad]) # numpy.array([6803.1366,0,97.04,0.005,0,270.828])
 ## MAKE SURE TO FOLLOW RIGHT orbital elements order
 
 

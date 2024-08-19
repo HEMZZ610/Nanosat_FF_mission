@@ -132,10 +132,9 @@ def NSROE2car(ROE,param):
     e=numpy.sqrt(q1**2 + q2**2)
     h=numpy.sqrt(mu*a*(1-e**2))
     term1=(h**2)/(mu)
-    neta = 1- q1**2 - q2**2
+    eta = 1- q1**2 - q2**2
     p=term1
     rp=a*(1-e)
-    r = ( a*neta**2 ) / (1+q1)
     n = numpy.sqrt(mu/(a**3))
 
     omega_peri = numpy.arccos(q1 / e)
@@ -143,6 +142,7 @@ def NSROE2car(ROE,param):
     theta_tuple = M2theta(mean_anamoly,e,1e-8)
     theta =theta_tuple[0]
     u=theta+omega_peri
+    r = ( a*eta**2 ) / (1+ (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
     
     # obtaining position and velocity vector in perifocan reference frame
     rp = ( h ** 2 / mu ) * ( 1 / ( 1 + e * numpy.cos( u ) ) ) * ( numpy.cos( u ) * numpy.array([ 1 , 0 ,0 ])
@@ -388,10 +388,9 @@ def guess_nonsingular(t,yy,param):
     e=numpy.sqrt(q1**2 + q2**2)
     h=numpy.sqrt(mu*a*(1-e**2))
     term1=(h**2)/(mu)
-    neta = 1- q1**2 - q2**2
+    eta = 1- q1**2 - q2**2
     p=term1
     rp=a*(1-e)
-    r = ( a*neta**2 ) / (1+q1)
     n = numpy.sqrt(mu/(a**3))
 
     omega_peri = numpy.arccos(q1 / e)
@@ -399,6 +398,7 @@ def guess_nonsingular(t,yy,param):
     theta_tuple = M2theta(mean_anamoly,e,1e-8)
     theta =theta_tuple[0]
     u=theta+omega_peri
+    r = ( a*eta**2 ) / (1+ (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
 
     # rr,vv=kep2car(numpy.array([h,yy[1],yy[2],yy[3],yy[4],yy[5]]),mu)
     # data={"J":[J2,J3,J4],"S/C":[M_SC,A_cross,C_D,Ballistic coefficient],"Primary":[mu,RE.w]}
@@ -434,8 +434,8 @@ def guess_nonsingular(t,yy,param):
     
     y_dot[0]=((2*a**2) / h) * (((q1*numpy.sin(u))-q2*numpy.cos(u))*FR + (p/r)*FS)
 
-    t1= ((-p/h*(1+neta))*(q1*numpy.cos(u)+q2*numpy.sin(u))-((2*neta*r)/h))
-    t2=((p+r)/h*(1+neta))*(q1*numpy.sin(u)-q2*numpy.cos(u))
+    t1= ((-p/h*(1+eta))*(q1*numpy.cos(u)+q2*numpy.sin(u))-((2*eta*r)/h))
+    t2=((p+r)/h*(1+eta))*(q1*numpy.sin(u)-q2*numpy.cos(u))
     t3=((r*numpy.sin(u)*numpy.cos(i))/(h*numpy.sin(i)))
 
     y_dot[1]=t1*FR + t2 * FS - t3 *FW
@@ -487,10 +487,9 @@ def guess_nonsingular_Bmat(t,yy,param):
     e=numpy.sqrt(q1**2 + q2**2)
     h=numpy.sqrt(mu*a*(1-e**2))
     term1=(h**2)/(mu)
-    neta = 1- q1**2 - q2**2
+    eta =  numpy.sqrt(1 - q1**2 - q2**2)
     p=term1
     rp=a*(1-e)
-    r = ( a*neta**2 ) / (1+q1)
     n = numpy.sqrt(mu/(a**3))
 
     omega_peri = numpy.arccos(q1 / e)
@@ -498,6 +497,7 @@ def guess_nonsingular_Bmat(t,yy,param):
     theta_tuple = M2theta(mean_anamoly,e,1e-8)
     theta =theta_tuple[0]
     u=theta+omega_peri
+    r = ( a*eta**2 ) / (1+ (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
 
     # rr,vv=kep2car(numpy.array([h,yy[1],yy[2],yy[3],yy[4],yy[5]]),mu)
     # data={"J":[J2,J3,J4],"S/C":[M_SC,A_cross,C_D,Ballistic coefficient],"Primary":[mu,RE.w]}
@@ -530,11 +530,12 @@ def guess_nonsingular_Bmat(t,yy,param):
     FS=F_J[1]
     FW=F_J[2]
 
-    y_dot_0 = numpy.array([((2 * a**2) / h) * ((q1 * numpy.sin(u)) - q2 * numpy.cos(u)), (p / r) * FS, 0])
+    y_dot_0 = ((2 * a**2) / h)* numpy.array([((q1 * numpy.sin(u)) - q2 * numpy.cos(u)), (p / r) , 0])
 
-    t1 = (-p / h * (1 + neta)) * (q1 * numpy.cos(u) + q2 * numpy.sin(u)) - ((2 * neta * r) / h)
-    t2 = ((p + r) / h * (1 + neta)) * (q1 * numpy.sin(u) - q2 * numpy.cos(u))
+    t1 = (-p / (h * (1 + eta))) * (q1 * numpy.cos(u) + q2 * numpy.sin(u)) - ((2 * eta * r) / h)
+    t2 = ((p + r) / (h * (1 + eta))) * (q1 * numpy.sin(u) - q2 * numpy.cos(u))
     t3 = (r * numpy.sin(u) * numpy.cos(i)) / (h * numpy.sin(i))
+
     y_dot_1 = numpy.array([t1, t2, -t3])
 
     y_dot_2 = numpy.array([0, 0, (r * numpy.cos(u)) / h])
@@ -545,11 +546,11 @@ def guess_nonsingular_Bmat(t,yy,param):
     y_dot_3 = numpy.array([t1, t2, t3])
 
     t1 = (p * numpy.cos(u)) / h
-    t2 = ((p + r) / h) * (numpy.cos(u) + r * q2)
+    t2 = ((p + r) / h) * (numpy.sin(u) + r * q2)
     t3 = (r * q1 * numpy.sin(u) * numpy.cos(i)) / (h * numpy.sin(i))
     y_dot_4 = numpy.array([-t1, t2, -t3])
 
-    y_dot_5 = numpy.array([0, 0, (r * numpy.cos(u)) / (h * numpy.sin(i))])
+    y_dot_5 = numpy.array([0, 0, (r * numpy.sin(u)) / (h * numpy.sin(i))])
 
     B_mat = numpy.vstack([y_dot_0, y_dot_1, y_dot_2, y_dot_3, y_dot_4, y_dot_5])
         
@@ -580,10 +581,10 @@ def lagrage_J2_diff(t,yy,data):
     e=numpy.sqrt(q1**2 + q2**2)
     h=numpy.sqrt(mu*a*(1-e**2))
     term1=(h**2)/(mu)
-    eta = 1- q1**2 - q2**2
+    eta =  numpy.sqrt(1 - q1**2 - q2**2)
     p=term1
     rp=a*(1-e)
-    r = ( a*eta**2 ) / (1+q1)
+
     n = numpy.sqrt(mu/(a**3))
 
     omega_peri = numpy.arccos(q1 / e)
@@ -591,6 +592,7 @@ def lagrage_J2_diff(t,yy,data):
     theta_tuple = M2theta(mean_anamoly,e,1e-8)
     theta =theta_tuple[0]
     u=theta+omega_peri
+    r = ( a*eta**2 ) / (1+ (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
 
     # Compute each component
     component_1 = 0
@@ -612,20 +614,13 @@ def lagrage_J2_diff(t,yy,data):
 # # References frames and convertions
 
 def Lagrange_deri(t,yy,param):
-    # Guass planetary equations
-    # Input, 
-    # t - time
-    # x0 - state vector
-    # param is a tuple 3 x 1
-    # param[0] - COE vector - [angular momentum, eccentricity, inclination, RAAN, argument of perigee, true anomaly]
-    # param[1] - J2 constant value
-    # param[0] - list of information related to Earth [mu, radius]
+    # taken from ROSCOE ET AL Appendix B Differential Form of Lagrange’s Planetary Equations
 
     # data={"J":[J2,J3,J4],"S/C":[M_SC,A_cross,C_D,Ballistic coefficient],"Primary":[mu,RE.w]}
-    data={"J":[0.1082626925638815e-2,0,0],"S/C":[300,2,0.9,300],"Primary":[3.98600433e5,6378.16,7.2921150e-5]}
+    data=param# {"J":[0.1082626925638815e-2,0,0],"S/C":[300,2,0.9,300],"Primary":[3.98600433e5,6378.16,7.2921150e-5]}
     mu=data["Primary"][0]
     y_dot=numpy.zeros((6,))
-    epsilon =  data["J"][0]
+    
 
 
 
@@ -646,10 +641,9 @@ def Lagrange_deri(t,yy,param):
     e=numpy.sqrt(q1**2 + q2**2)
     h=numpy.sqrt(mu*a*(1-e**2))
     term1=(h**2)/(mu)
-    neta = 1- q1**2 - q2**2
+    eta =  numpy.sqrt(1 - q1**2 - q2**2)
     p=term1
     rp=a*(1-e)
-    r = ( a*neta**2 ) / (1+q1)
     n = numpy.sqrt(mu/(a**3))
 
     omega_peri = numpy.arccos(q1 / e)
@@ -657,9 +651,10 @@ def Lagrange_deri(t,yy,param):
     theta_tuple = M2theta(mean_anamoly,e,1e-8)
     theta =theta_tuple[0]
     u=theta+omega_peri
-
+    r = ( a*eta**2 ) / (1+ (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
     # rr,vv=kep2car(numpy.array([h,yy[1],yy[2],yy[3],yy[4],yy[5]]),mu)
 
+    epsilon =  data["J"][0] * ((data["Primary"][1] / p)**2) * n
 
 
     # perturbations
@@ -696,15 +691,15 @@ def Lagrange_deri(t,yy,param):
 
     
     term_l_a_1= (-(3*n)/(2*a)) 
-    term_l_a_2= ((21*epsilon)/(8*a)) * (neta*((3*numpy.cos(i)**2)-1)+((5*numpy.cos(i)**2)-1)) 
+    term_l_a_2= ((21*epsilon)/(8*a)) * (eta*((3*numpy.cos(i)**2)-1)+((5*numpy.cos(i)**2)-1)) 
     term_l_a= term_l_a_1 - term_l_a_2 
 
-    term_l_i= ((-3*epsilon)/4)*(3*neta+5)*numpy.sin(2*i)
+    term_l_i= ((-3*epsilon)/4)*(3*eta+5)*numpy.sin(2*i)
 
-    term_l_q1_1 = ((3*epsilon)/(4*neta**2)) * (3*neta*((3*numpy.cos(i)**2)-1)+4*((5*numpy.cos(i)**2)-1)) 
-    term_l_q1 = term_l_q1_1   
+    term_l_q1_1 = ((3*epsilon)/(4*eta**2)) * (3*eta*((3*numpy.cos(i)**2)-1)+4*((5*numpy.cos(i)**2)-1)) 
+    term_l_q1 = term_l_q1_1 * q1
 
-    term_l_q2_1 = ((3*epsilon)/(4*neta**2)) * (3*neta*((3*numpy.cos(i)**2)-1)+4*((5*numpy.cos(i)**2)-1)) 
+    term_l_q2_1 = ((3*epsilon)/(4*eta**2)) * (3*eta*((3*numpy.cos(i)**2)-1)+4*((5*numpy.cos(i)**2)-1)) 
     term_l_q2 = term_l_q2_1 * q2  
 
     term_q1_a_1 = ((21*epsilon)/(8*a)) * (((5*numpy.cos(i)**2)-1)) 
@@ -712,28 +707,28 @@ def Lagrange_deri(t,yy,param):
 
     term_q1_i = ((15*epsilon)/(4)) * q2* (numpy.sin(2*i)) 
 
-    term_q1_q1_1 = ((-3*epsilon)/(neta**2)) * (((5*numpy.cos(i)**2)-1)) 
+    term_q1_q1_1 = ((-3*epsilon)/(eta**2)) * (((5*numpy.cos(i)**2)-1)) 
     term_q1_q1 = term_q1_q1_1 * q1* q2
 
-    term_q1_q2 = ((-3*epsilon)/(4)) *(1+((4*q2**2)/neta**2))* (((5*numpy.cos(i)**2)-1)) 
+    term_q1_q2 = ((-3*epsilon)/(4)) *(1+((4*q2**2)/eta**2))* (((5*numpy.cos(i)**2)-1)) 
 
     term_q2_a_1= ((-21*epsilon)/(8*a)) * (((5*numpy.cos(i)**2)-1)) 
     term_q2_a = term_q2_a_1 * q1
 
     term_q2_i= ((-15*epsilon)/(4)) *  q1 *numpy.sin(2*i) 
 
-    term_q2_q1 = ((3*epsilon)/(4)) *(1+((4*q2**2)/neta**2))* (((5*numpy.cos(i)**2)-1)) 
+    term_q2_q1 = ((3*epsilon)/(4)) *(1+((4*q2**2)/eta**2))* (((5*numpy.cos(i)**2)-1)) 
 
-    term_q2_q2_1 = ((3*epsilon)/(neta**2)) * (((5*numpy.cos(i)**2)-1)) 
+    term_q2_q2_1 = ((3*epsilon)/(eta**2)) * (((5*numpy.cos(i)**2)-1)) 
     term_q2_q2 = term_q2_q2_1 * q1 * q2
 
     term_OM_a= ((21*epsilon)/(4*a)) *  numpy.cos(i) 
 
     term_OM_i= ((3*epsilon)/(2)) *numpy.sin(i) 
 
-    term_OM_q1= ((-6*epsilon)/(neta**2)) *  q1 *numpy.cos(i) 
+    term_OM_q1= ((-6*epsilon)/(eta**2)) *  q1 *numpy.cos(i) 
 
-    term_OM_q2= ((-6*epsilon)/(neta**2)) *  q2 *numpy.cos(i) 
+    term_OM_q2= ((-6*epsilon)/(eta**2)) *  q2 *numpy.cos(i) 
 
     A_mat = numpy.vstack([[0,0,0,0,0,0],
                          [term_l_a,0,term_l_i, term_l_q1, term_l_q2,0],
@@ -812,10 +807,9 @@ def Cart2RO(RO,OE_1):
     e=numpy.sqrt(q1**2 + q2**2)
     h=numpy.sqrt(mu*a*(1-e**2))
     term1=(h**2)/(mu)
-    neta = 1- q1**2 - q2**2
+    eta = 1- q1**2 - q2**2
     p=term1
     rp=a*(1-e)
-    r = ( a*neta**2 ) / (1+q1)
     n = numpy.sqrt(mu/(a**3))
 
     omega_peri = numpy.arccos(q1 / e)
@@ -823,6 +817,7 @@ def Cart2RO(RO,OE_1):
     theta_tuple = M2theta(mean_anamoly,e,1e-8)
     theta =theta_tuple[0]
     u=theta+omega_peri
+    r = ( a*eta**2 ) / (1+ (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
 
     Vr = (h/p) * (q1*numpy.sin(u)-q2*numpy.cos(u))
     Vt = (h/p) * (1+q1*numpy.cos(u)+q2*numpy.sin(u))
@@ -838,18 +833,18 @@ def Cart2RO(RO,OE_1):
 
 def Param2NROE(NOE, parameters,data):
 
+    # Taken from  C.traub paper 
     # NOE=numpy.array([a,lambda_0,i,q1,q2,omega]) unpack this
     a, lambda_, i, q1, q2, omega = NOE
     
     # Unpacking the parameters
-
     rho_1, rho_2, rho_3, alpha_0, beta_0,v_d = parameters
     
     mu=data["Primary"][0]
 
-    eta = 1 - q1**2 - q2**2
+    eta = numpy.sqrt(1 - q1**2 - q2**2)
 
-    n = numpy.sqrt(1 - eta)
+    n = numpy.sqrt(mu / a**3)
 
     e=numpy.sqrt(q1**2 + q2**2)
     h=numpy.sqrt(mu*a*(1-e**2))
@@ -910,10 +905,9 @@ def NSROE2Cart(NSROE,NSROE0,x_vec_init,data):
     e=numpy.sqrt(q1**2 + q2**2)
     h=numpy.sqrt(mu*a*(1-e**2))
     term1=(h**2)/(mu)
-    eta = 1- q1**2 - q2**2
+    eta =  numpy.sqrt(1 - q1**2 - q2**2)
     p=term1
     rp=a*(1-e)
-    r = ( a*eta**2 ) / (1+q1)
     n = numpy.sqrt(mu/(a**3))
 
     omega_peri = numpy.arccos(q1 / e)
@@ -922,8 +916,10 @@ def NSROE2Cart(NSROE,NSROE0,x_vec_init,data):
     f =theta_tuple[0]
     theta=f+omega_peri
     E = 2*numpy.arctan(numpy.tan(f/2)*numpy.sqrt((1-e)/(1+e)))
-
     F = omega_peri + E 
+    r = ( a*eta**2 ) / (1+ (q1 * numpy.cos(F)) + (q2 * numpy.sin(F)))
+
+
     # Calculate alpha
     alpha_val = lambda q1,q2,theta: 1 + q1 * numpy.cos(theta) + q2 * numpy.cos(theta)
     
@@ -1014,10 +1010,9 @@ def NSROE2LVLH(NSROE,NSOE0,data):
     e=numpy.sqrt(q1**2 + q2**2)
     h=numpy.sqrt(mu*a*(1-e**2))
     term1=(h**2)/(mu)
-    eta = 1- q1**2 - q2**2
+    eta =  numpy.sqrt(1 - q1**2 - q2**2)
     p=term1
     rp=a*(1-e)
-    r = ( a*eta**2 ) / (1+q1)
     n = numpy.sqrt(mu/(a**3))
 
     omega_peri = numpy.arccos(q1 / e)
@@ -1025,6 +1020,7 @@ def NSROE2LVLH(NSROE,NSOE0,data):
     theta_tuple = M2theta(mean_anamoly,e,1e-8)
     theta =theta_tuple[0]
     u=theta+omega_peri
+    r = ( a*eta**2 ) / (1+ (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
 
 
     e1 =(a / eta) * ((1 - eta**2) * delta_lambda0**2 + 2 * (q2 * delta_q1 - q1 * delta_q2) * delta_lambda0
