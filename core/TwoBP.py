@@ -137,12 +137,16 @@ def NSROE2car(ROE,param):
     rp=a*(1-e)
     n = numpy.sqrt(mu/(a**3))
 
-    omega_peri = numpy.arccos(q1 / e)
-    mean_anamoly = l-omega_peri
-    theta_tuple = M2theta(mean_anamoly,e,1e-8)
-    theta =theta_tuple[0]
-    u=theta+omega_peri
-    r = ( a*eta**2 ) / (1+ (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
+    if e==0:  
+        u = l
+        r = (a * eta**2) / (1 + (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
+    else:
+        omega_peri = numpy.arccos(q1 / e)
+        mean_anamoly = l - omega_peri
+        theta_tuple = M2theta(mean_anamoly, e, 1e-8)
+        theta = theta_tuple[0]
+        u = theta + omega_peri
+        r = (a * eta**2) / (1 + (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
     
     # obtaining position and velocity vector in perifocan reference frame
     rp = ( h ** 2 / mu ) * ( 1 / ( 1 + e * numpy.cos( u ) ) ) * ( numpy.cos( u ) * numpy.array([ 1 , 0 ,0 ])
@@ -393,12 +397,16 @@ def guess_nonsingular(t,yy,param):
     rp=a*(1-e)
     n = numpy.sqrt(mu/(a**3))
 
-    omega_peri = numpy.arccos(q1 / e)
-    mean_anamoly = l-omega_peri
-    theta_tuple = M2theta(mean_anamoly,e,1e-8)
-    theta =theta_tuple[0]
-    u=theta+omega_peri
-    r = ( a*eta**2 ) / (1+ (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
+    if e==0:  
+        u = l
+        r = (a * eta**2) / (1 + (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
+    else:
+        omega_peri = numpy.arccos(q1 / e)
+        mean_anamoly = l - omega_peri
+        theta_tuple = M2theta(mean_anamoly, e, 1e-8)
+        theta = theta_tuple[0]
+        u = theta + omega_peri
+        r = (a * eta**2) / (1 + (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
 
     # rr,vv=kep2car(numpy.array([h,yy[1],yy[2],yy[3],yy[4],yy[5]]),mu)
     # data={"J":[J2,J3,J4],"S/C":[M_SC,A_cross,C_D,Ballistic coefficient],"Primary":[mu,RE.w]}
@@ -492,12 +500,16 @@ def guess_nonsingular_Bmat(t,yy,param):
     rp=a*(1-e)
     n = numpy.sqrt(mu/(a**3))
 
-    omega_peri = numpy.arccos(q1 / e)
-    mean_anamoly = l-omega_peri
-    theta_tuple = M2theta(mean_anamoly,e,1e-8)
-    theta =theta_tuple[0]
-    u=theta+omega_peri
-    r = ( a*eta**2 ) / (1+ (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
+    if e==0:  
+        u = l
+        r = (a * eta**2) / (1 + (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
+    else:
+        omega_peri = numpy.arccos(q1 / e)
+        mean_anamoly = l - omega_peri
+        theta_tuple = M2theta(mean_anamoly, e, 1e-8)
+        theta = theta_tuple[0]
+        u = theta + omega_peri
+        r = (a * eta**2) / (1 + (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
 
     # rr,vv=kep2car(numpy.array([h,yy[1],yy[2],yy[3],yy[4],yy[5]]),mu)
     # data={"J":[J2,J3,J4],"S/C":[M_SC,A_cross,C_D,Ballistic coefficient],"Primary":[mu,RE.w]}
@@ -587,12 +599,19 @@ def lagrage_J2_diff(t,yy,data):
 
     n = numpy.sqrt(mu/(a**3))
 
-    omega_peri = numpy.arccos(q1 / e)
-    mean_anamoly = l-omega_peri
-    theta_tuple = M2theta(mean_anamoly,e,1e-8)
-    theta =theta_tuple[0]
-    u=theta+omega_peri
-    r = ( a*eta**2 ) / (1+ (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
+    
+    if e==0:  
+        u = l
+        r = (a * eta**2) / (1 + (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
+    else:
+        omega_peri = numpy.arccos(q1 / e)
+        mean_anamoly = l - omega_peri
+        theta_tuple = M2theta(mean_anamoly, e, 1e-8)
+        theta = theta_tuple[0]
+        u = theta + omega_peri
+        r = (a * eta**2) / (1 + (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
+
+
 
     # Compute each component
     component_1 = 0
@@ -646,12 +665,17 @@ def Lagrange_deri(t,yy,param):
     rp=a*(1-e)
     n = numpy.sqrt(mu/(a**3))
 
-    omega_peri = numpy.arccos(q1 / e)
-    mean_anamoly = l-omega_peri
-    theta_tuple = M2theta(mean_anamoly,e,1e-8)
-    theta =theta_tuple[0]
-    u=theta+omega_peri
-    r = ( a*eta**2 ) / (1+ (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
+    if e==0:  
+        u = l
+        r = (a * eta**2) / (1 + (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
+    else:
+        omega_peri = numpy.arccos(q1 / e)
+        mean_anamoly = l - omega_peri
+        theta_tuple = M2theta(mean_anamoly, e, 1e-8)
+        theta = theta_tuple[0]
+        u = theta + omega_peri
+        r = (a * eta**2) / (1 + (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
+        
     # rr,vv=kep2car(numpy.array([h,yy[1],yy[2],yy[3],yy[4],yy[5]]),mu)
 
     epsilon =  data["J"][0] * ((data["Primary"][1] / p)**2) * n
@@ -812,12 +836,16 @@ def Cart2RO(RO,OE_1):
     rp=a*(1-e)
     n = numpy.sqrt(mu/(a**3))
 
-    omega_peri = numpy.arccos(q1 / e)
-    mean_anamoly = l-omega_peri
-    theta_tuple = M2theta(mean_anamoly,e,1e-8)
-    theta =theta_tuple[0]
-    u=theta+omega_peri
-    r = ( a*eta**2 ) / (1+ (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
+    if e==0:  
+        u = l
+        r = (a * eta**2) / (1 + (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
+    else:
+        omega_peri = numpy.arccos(q1 / e)
+        mean_anamoly = l - omega_peri
+        theta_tuple = M2theta(mean_anamoly, e, 1e-8)
+        theta = theta_tuple[0]
+        u = theta + omega_peri
+        r = (a * eta**2) / (1 + (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
 
     Vr = (h/p) * (q1*numpy.sin(u)-q2*numpy.cos(u))
     Vt = (h/p) * (1+q1*numpy.cos(u)+q2*numpy.sin(u))
@@ -1015,12 +1043,16 @@ def NSROE2LVLH(NSROE,NSOE0,data):
     rp=a*(1-e)
     n = numpy.sqrt(mu/(a**3))
 
-    omega_peri = numpy.arccos(q1 / e)
-    mean_anamoly = l-omega_peri
-    theta_tuple = M2theta(mean_anamoly,e,1e-8)
-    theta =theta_tuple[0]
-    u=theta+omega_peri
-    r = ( a*eta**2 ) / (1+ (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
+    if e==0:  
+        u = l
+        r = (a * eta**2) / (1 + (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
+    else:
+        omega_peri = numpy.arccos(q1 / e)
+        mean_anamoly = l - omega_peri
+        theta_tuple = M2theta(mean_anamoly, e, 1e-8)
+        theta = theta_tuple[0]
+        u = theta + omega_peri
+        r = (a * eta**2) / (1 + (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
 
 
     e1 =(a / eta) * ((1 - eta**2) * delta_lambda0**2 + 2 * (q2 * delta_q1 - q1 * delta_q2) * delta_lambda0

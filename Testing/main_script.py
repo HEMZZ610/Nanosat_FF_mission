@@ -55,16 +55,47 @@ deg2rad = numpy.pi / 180
 # NOE_chief = numpy.array([a,lambda_0,i,q1,q2,omega])
 NOE_chief = numpy.array([6803.1366,0,63.45*deg2rad,0.005,0,270.828*deg2rad]) # numpy.array([6803.1366,0,97.04,0.005,0,270.828])
 ## MAKE SURE TO FOLLOW RIGHT orbital elements order
+ 
 
+    # assigning the state variables
+a =NOE_chief[0]
+l =NOE_chief[1]
+i =NOE_chief[2]
+q1 =NOE_chief[3]
+q2 =NOE_chief[4]
+OM =NOE_chief[5]
+mu = data["Primary"][0]
+
+
+e=numpy.sqrt(q1**2 + q2**2)
+h=numpy.sqrt(mu*a*(1-e**2))
+term1=(h**2)/(mu)
+eta = 1- q1**2 - q2**2
+p=term1
+rp=a*(1-e)
+n = numpy.sqrt(mu/(a**3))
+
+if e==0:  
+    u = l
+    r = (a * eta**2) / (1 + (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
+else:
+    omega_peri = numpy.arccos(q1 / e)
+    mean_anamoly = l - omega_peri
+    theta_tuple = M2theta(mean_anamoly, e, 1e-8)
+    
+    theta = theta_tuple[0]
+    u = theta + omega_peri
+    r = (a * eta**2) / (1 + (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))
 
 # Design parameters for the formation - Sengupta and Vadali 2007 Relative Motion and the Geometry of Formations in Keplerian Elliptic Orbits
 
-rho_1 = 10 # [m]  - radial separation 
-rho_2 = 100 # [m]  - along-track separation
-rho_3 = 100 # [m]  - cross-track separation
-alpha = 10 * deg2rad  # [rad] - angle between the radial and along-track separation
-beta = 10 * deg2rad # [rad] - angle between the radial and cross-track separation
+rho_1 = 0 # [m]  - radial separation 
+rho_3 =0 # [m]  - cross-track separation
+alpha = 180 * deg2rad  # [rad] - angle between the radial and along-track separation
+beta = 90 * deg2rad # [rad] - angle between the radial and cross-track separation
 vd = 0 #-10 # Drift per revolutions m/resolution
+
+rho_2 = 20 # [m]  - along-track separation
 
 parameters=numpy.array([rho_1,rho_2,rho_3,alpha,beta,vd])
 
@@ -94,13 +125,13 @@ yy_o=numpy.concatenate((RNOE_0,NOE_chief,yaw_c_d))
 mu=data["Primary"][0]
 Torb = 2*numpy.pi*numpy.sqrt(NOE_chief[0]**3/mu)    # [s]    Orbital period
 n_revol_T = 24*60*60/Torb
-n_revolution= 20#100*n_revol_T
+n_revolution= 2*365*n_revol_T
 T_total=n_revolution*Torb
 
 t_span=[0,T_total]
 teval=numpy.linspace(0, T_total, 20000)
 # K=numpy.array([k1,k2])
-
+ 
 data["Init"] = [NOE_chief[4],NOE_chief[3], 0]
 
 sol=integrate.solve_ivp(Dynamics, t_span, yy_o,t_eval=teval,
