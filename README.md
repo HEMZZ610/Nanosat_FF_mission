@@ -1,8 +1,19 @@
 # Nanosat_FF_mission
 
+This repository holds the code for the project aimed at developing guidance and control for nanosatellite formation flying mission aimed at space debris characterizating using aerodynamic force. In the following sections you will more details of the project starting from description, methodology, simulation results.
+
 # Description of the project
 
+Low earth orbit (LEO) and very low earth orbit(VLEO)  are important regions for space-based applications like Earth observation, Telecommunication, and Astrophysics. Understanding and modeling the Space debris in this region is of utmost importance for space situational awareness. Specifically, due to the limitations of ground-based sensor systems, the detection and characterization of sub-millimeter-level objects require an in-situ sensor system. In these regions, the effect of aerodynamic force is significant, as a result, utilization of this force for position control is very attractive, especially for nanosats. This will enable nanosats not to carry propulsion system leading to increased available size, weight, and power (SWAP) for mission outputs such as science data by increasing the payload quality and mission redundancy via extra sensors and actuators. 	
+ 
+In this work, we are proposing a guidance and control methodology for a novel aerodynamics-based nanosat formation flying mission. As the size and shape of the debris are not known a priori, the multi-static synthetic aperture radar (MSSAR) technique is considered to detect and characterize the sub-millimeter debris particles. 
+
+
 # Methodology
+
+### Relative orbital dynamics with J2 pertubation in nearly non singular orbital element representation
+
+Due to simplicity and its capabilities to represent orbits with arbitrary eccentricity, nearly non singular elements are used[Roscoe]. With the introduction of parameters that can be used to geometrically define the formation flying [sengupta], various trajectories are shown below.
 
 # Repo directory structure
 ```markdown
@@ -12,9 +23,10 @@
 └── .gitignore
 ```
 
-- **core** contains the functions and details related to core part of Spacecraft OOS that attitude dynamics models, kinematics, translation dynamics, etc.
+- **core** contains the functions and details related to core part of project that includes attitude dynamics models, kinematics, translation dynamics, etc.
 - **Testing** contains the test of each function/modules.
 # Simulation
+
 
 
 # References

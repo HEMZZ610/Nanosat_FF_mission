@@ -1,8 +1,7 @@
 """
+Nanosat Formation Flying Project
 
-This script is used to test gauss planetary equation function present inside "TwoBP.py"
-
-Date: 16/08/2024
+Testing the core libraries : Testing the absolute near non singular orbital elements dynamics
 
 Author:
     Vishnuvardhan Shakthibala

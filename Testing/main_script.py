@@ -1,8 +1,9 @@
 """
+Nanosat Formation Flying Project
 
-This script is used to test gauss planetary equation function present inside "TwoBP.py"
-
-Date: 16/08/2024
+Relative dynamics of two nanosatellites are defined here with J2 perturbation. Taken from paper: 
+A planning tool for optimal three-dimensional formation flight maneuvers of satellites in VLEO using aerodynamic lift and drag via yaw angle deviations  
+Traub, C., Fasoulas, S., and Herdrich, G. (2022). 
 
 Author:
     Vishnuvardhan Shakthibala
@@ -82,7 +83,7 @@ else:
     omega_peri = numpy.arccos(q1 / e)
     mean_anamoly = l - omega_peri
     theta_tuple = M2theta(mean_anamoly, e, 1e-8)
-    
+
     theta = theta_tuple[0]
     u = theta + omega_peri
     r = (a * eta**2) / (1 + (q1 * numpy.cos(u)) + (q2 * numpy.sin(u)))

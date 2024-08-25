@@ -1,13 +1,13 @@
 """
+Nanosat Formation Flying Project
 
-This script is used to test gauss planetary equation function present inside "TwoBP.py"
-
-Date: 25-04-2024
-
+Testing the core libraries : Testing the guess_nonsingular function
 Author:
     Vishnuvardhan Shakthibala
     
+
 """
+
 ## Copy the following lines of code 
 # FROM HERE
 import numpy

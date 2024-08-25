@@ -1,11 +1,12 @@
 """
-Usage:
-    
+Nanosat Formation Flying Project
+
+Testing the core libraries
 
 Author:
     Vishnuvardhan Shakthibala
+    
 """
-
 ## Copy the following lines of code 
 # FROM HERE
 import numpy

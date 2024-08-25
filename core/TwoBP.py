@@ -1,10 +1,11 @@
 """
-This file contains functions required for orbital mechanics - starting from 2body problem to gauss planetary equations + auxillary funtions
+Nanosat Formation Flying Project
 
-Date: 25-04-2024
+All the functions related to the orbital mechanics are defined here
 
 Author:
     Vishnuvardhan Shakthibala
+    
 """
 import numpy
 from scipy import integrate,optimize

@@ -1,9 +1,11 @@
 """
-Usage:
-    This file contains typical perturbations present in space
+Nanosat Formation Flying Project
+
+Perturbations due to non-spherical earth and atmospheric drag are defined here
 
 Author:
     Vishnuvardhan Shakthibala
+    
 """
 import numpy
 import os

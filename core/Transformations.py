@@ -1,11 +1,11 @@
 """
-Standard transformations required for Astrodynamics
-    
-Date: 25-04-2024
+Nanosat Formation Flying Project
+
+All the functions\ required for frame transformations are defined here
 
 Author:
-    SDCS group
     Vishnuvardhan Shakthibala
+    
 """
 
 import numpy

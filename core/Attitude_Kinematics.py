@@ -1,9 +1,11 @@
 """
-Usage:
-    
+Nanosat Formation Flying Project
+
+All the functions required for attitude kinematics are defined here
 
 Author:
     Vishnuvardhan Shakthibala
+    
 """
 
 import numpy

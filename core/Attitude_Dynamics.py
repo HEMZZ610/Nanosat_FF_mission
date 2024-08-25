@@ -1,12 +1,11 @@
 """
+Nanosat Formation Flying Project
 
-Attitude dynamics related functions
-
-Date: 25-04-2024
+All the functions related to attitude dynamics are defined here
 
 Author:
-    SDCS group
     Vishnuvardhan Shakthibala
+    
 """
 import numpy
 import math
