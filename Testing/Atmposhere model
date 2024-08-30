@@ -1,0 +1,152 @@
+import numpy as np
+from nrlmsise00 import msise_model
+from datetime import datetime
+from scipy.optimize import minimize
+import matplotlib.pyplot as plt
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score
+
+# Earth's radius in km
+Re = 6371  
+
+# Semi-major axis range (VLEO altitude range between 150 km to 530 km)
+semi_major_axis = np.linspace(Re + 150, Re + 530, 100)  
+
+# Circular and elliptical orbits eccentricities
+eccentricities = [0, 0.99, 0.1]
+
+# True anomaly range from 0 to 360 degrees
+true_anomaly = np.linspace(0, 2 * np.pi, 1000)
+
+# Plotting the distance from Earth center to spacecraft (r) for different orbits
+plt.figure(figsize=(10, 6))
+for e in eccentricities:
+    for a in semi_major_axis:
+        r = (a * (1 - e**2)) / (1 + e * np.cos(true_anomaly))
+        plt.plot(true_anomaly * 180 / np.pi, r)
+plt.xlabel('True Anomaly (degrees)')
+plt.ylabel('Distance from Earth center to S/C (r) [km]')
+plt.title('Range of r in VLEO for different orbits')
+plt.grid(True)
+plt.show()
+
+# Calculate min and max r for the full range of orbits
+min_r = np.min([(a * (1 - e**2)) / (1 + e * np.cos(true_anomaly)) for e in eccentricities for a in semi_major_axis])
+max_r = np.max([(a * (1 - e**2)) / (1 + e * np.cos(true_anomaly)) for e in eccentricities for a in semi_major_axis])
+
+print(f"Range of r in VLEO: min r = {min_r:.2f} km, max r = {max_r:.2f} km")
+
+# DataFrame for Semi-Major Axis and Eccentricity
+df = pd.DataFrame([(a, e) for a in semi_major_axis for e in eccentricities], 
+                  columns=["Semi-Major Axis (km)", "Eccentricity"])
+
+print("\nTable of Semi-Major Axis and Eccentricity:")
+print(df)
+
+# Analytic Density Model
+def analytic_density_model(u, r, i, A, B, C, D):
+    return A * (1 + B * np.cos(u - C)) * np.exp((r - Re) * np.sqrt(1 - 0.0167**2 * np.sin(i)**2 * np.sin(u)**2) / D)
+
+# MSE Loss Function
+def mse_loss(params, u, r, i, density_ref):
+    A, B, C, D = params
+    density_pred = analytic_density_model(u, r, i, A, B, C, D)
+    mse = np.mean((density_pred - density_ref) ** 2)
+    return mse
+
+# Function to get density from NRLMSISE-00
+def get_density_from_nrlmsise00(alt, lat, lon, date):
+    doy = date.timetuple().tm_yday
+    sec = date.hour * 3600 + date.minute * 60 + date.second
+    lst = (date.hour + lon/15) % 24
+
+    densities, _ = msise_model(
+        time=date,  
+        alt=alt, 
+        lat=lat,  
+        lon=lon,  
+        f107a=150.0,  
+        f107=150.0,  
+        ap=4.0,  
+        lst=lst  
+    )
+    return densities[5]
+
+# Generate data
+u_data = np.arange(0, 2 * np.pi, 0.0174533)  # Argument of latitude in radians
+r_data = np.linspace(Re + 150, Re + 530, 100)  # Altitude range between 150 km to 530 km
+i_data = np.arange(0, np.pi / 2, 0.0174533)  # Inclination from 0 to 90 degrees in radians
+
+u_grid, r_grid, i_grid = np.meshgrid(u_data, r_data, i_data, indexing='ij')
+
+lat, lon = 0, 0  # Assuming satellite is over the equator at lon = 0
+date = datetime(2024, 8, 30, 12, 0, 0)
+
+density_ref = np.zeros_like(u_grid)
+for idx, _ in np.ndenumerate(density_ref):
+    alt = r_grid[idx] - Re  # Altitude above Earth's surface
+    density_ref[idx] = get_density_from_nrlmsise00(alt, lat, lon, date)
+
+# Flatten the arrays for fitting
+u_flat = u_grid.flatten()
+r_flat = r_grid.flatten()
+i_flat = i_grid.flatten()
+density_ref_flat = density_ref.flatten()
+
+# Initial guess for fitting parameters
+initial_guess = [1.0, 1.0, 1.0, 1.0]
+
+# Fitting the analytic density model
+result = minimize(mse_loss, initial_guess, args=(u_flat, r_flat, i_flat, density_ref_flat))
+A_fit, B_fit, C_fit, D_fit = result.x
+
+print(f"Fitted parameters: A={A_fit}, B={B_fit}, C={C_fit}, D={D_fit}")
+
+# Generate features for classification using the fitted model
+def generate_features(u_data, r_data, i_data):
+    features = []
+    for r in r_data:
+        for u in u_data:
+            for i in i_data:
+                density = analytic_density_model(u, r, i, A_fit, B_fit, C_fit, D_fit)
+                features.append([u, r, i, density])
+    return np.array(features)
+
+X = generate_features(u_data, r_data, i_data)
+
+# Assuming binary labels
+labels = np.random.randint(0, 2, size=X.shape[0])  # Provide appropriate binary labels
+
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(X, labels, test_size=0.2, random_state=42)
+
+# Train a classifier
+classifier = SVC(kernel='linear')
+classifier.fit(X_train, y_train)
+
+# Predict and evaluate
+y_pred = classifier.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
+
+print(f"Classification accuracy: {accuracy:.2f}")
+
+# Visualization
+time_hours = np.linspace(0, 24, len(r_data))
+r_specific = np.linspace(Re + 150, Re + 530, len(time_hours))
+i_specific = np.zeros_like(time_hours)
+
+density_fitted = analytic_density_model(time_hours * (2 * np.pi / 24), r_specific, i_specific, A_fit, B_fit, C_fit, D_fit)
+
+density_reference = np.array([get_density_from_nrlmsise00(r - Re, lat, lon, date) for r in r_specific])
+
+plt.figure(figsize=(10, 6))
+plt.plot(time_hours, density_fitted, label='Fitted Model Density', color='blue')
+plt.plot(time_hours, density_reference, label='Reference Density (NRLMSISE-00)', color='red', linestyle='dashed')
+plt.xlabel('Time (hours)')
+plt.ylabel('Density (kg/m³)')
+plt.title('Comparison of Fitted Model Density and Reference Density')
+plt.legend()
+plt.grid(True)
+plt.show()
